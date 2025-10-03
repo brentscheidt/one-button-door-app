@@ -1,4 +1,5 @@
-## v0.2
-- MVP with map, GPS, reverse geocode, one-tap save
-- Switched to CORS-safe text/plain POST
-- Added config.json boot flow
+# Changelog
+## v0.3.3
+- doGet JSON feed, live pins, user filter
+- Mobile-first, tap-to-select, geocoder parse city/state/zip
+- Configurable endpoint via app.config.js

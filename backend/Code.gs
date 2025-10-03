@@ -1,65 +1,35 @@
-/** Door Knock Logger — Backend v0.2
- * Sheet: DoorKnockLog / Knocks
- * Deploy as Web App: Execute as Me; Access: Anyone with the link
- * Security: shared secret stored in Script Properties as API_SECRET
- */
-
-const CONFIG = {
-  SHEET_NAME: 'Knocks',
-  PROP_SECRET_KEY: 'API_SECRET',
-  VERSION: 'v0.2',
-};
+/** Door Knock Logger — Backend v0.3.3 */
+const CONFIG = { SHEET_NAME: 'Knocks', VERSION: 'v0.3.3' };
 
 function _sheet() {
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(CONFIG.SHEET_NAME) || ss.insertSheet(CONFIG.SHEET_NAME);
   if (sh.getLastRow() === 0) {
-    sh.appendRow(['ts_iso','reason','notes','lat','lng','address','city','state','zip','source_device','version']);
+    sh.appendRow(['server_ts','client_ts','user_email','lat','lng','address','city','state','zip','homeowner_name','status','condition','interest_level','notes','follow_up_iso','photo_url','source_device','version']);
   }
   return sh;
 }
 
-function _secret() {
-  const s = PropertiesService.getScriptProperties().getProperty(CONFIG.PROP_SECRET_KEY);
-  if (!s) throw new Error('API secret not set. Add Script property "API_SECRET".');
-  return s;
-}
-
-function doGet() {
-  return ContentService.createTextOutput('Door Knock Logger API ok').setMimeType(ContentService.MimeType.TEXT);
-}
-
 function doPost(e) {
   try {
-    const body = e?.postData?.contents ? JSON.parse(e.postData.contents) : {};
-    if (!body.secret || body.secret !== _secret()) {
-      return _json({ ok: false, error: 'unauthorized' });
+    var data = JSON.parse(e.postData.contents);
+    var sh = _sheet();
+    sh.appendRow([ new Date(), data.timestamp, data.user_email || '', data.lat, data.lng, data.address, data.city, data.state, data.zip, '', '', '', '', '', '', '', 'web', CONFIG.VERSION ]);
+    return ContentService.createTextOutput("Success");
+  } catch (err) { return ContentService.createTextOutput("Error: " + err); }
+}
+
+function doGet(e) {
+  try {
+    var sh = _sheet();
+    var data = sh.getDataRange().getValues();
+    var headers = data[0];
+    var rows = [];
+    for (var i = 1; i < data.length; i++) {
+      var row = {};
+      for (var j = 0; j < headers.length; j++) row[headers[j]] = data[i][j];
+      rows.push(row);
     }
-    const sh = _sheet();
-    const row = [
-      body.ts_iso || new Date().toISOString(),
-      body.reason || '',
-      body.notes || '',
-      _num(body.lat), _num(body.lng),
-      body.address || '',
-      body.city || '',
-      body.state || '',
-      body.zip || '',
-      body.source_device || 'web',
-      CONFIG.VERSION,
-    ];
-    sh.appendRow(row);
-    return _json({ ok: true, saved_at: new Date().toISOString() });
-  } catch (err) {
-    return _json({ ok: false, error: String(err) });
-  }
-}
-
-function _json(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
-
-function _num(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : '';
+    return ContentService.createTextOutput(JSON.stringify(rows)).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) { return ContentService.createTextOutput("Error: " + err); }
 }
