@@ -1,0 +1,18 @@
+Title: Resume One Button Door App (v0.2)
+
+Context:
+I'm continuing a project that logs door knocks with Google Maps + Apps Script + Google Sheets.
+I have a local folder with: index.html, app.js, config.json, backend/Code.gs, README.md, CHANGELOG.md.
+
+State:
+- Frontend reads config.json at runtime and injects the Google Maps script.
+- Save is a POST (text/plain) to an Apps Script Web App URL with a shared secret.
+- Sheet schema: ts_iso, reason, notes, lat, lng, address, city, state, zip, source_device, version.
+
+My ask:
+- Verify my config.json values.
+- Ensure my Maps key has HTTP referrer restrictions and APIs (Maps JS + Geocoding) enabled.
+- Help me add a viewer page to plot historical pins from the Sheet.
+- Next features: offline queue, follow-up datetime, export CSV, and optional Places Autocomplete.
+
+Provide concrete code with full overwrite blocks.

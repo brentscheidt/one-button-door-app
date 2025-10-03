@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Door Knock Logger — v0.2</title>
+  <link rel="preconnect" href="https://maps.googleapis.com" crossorigin>
+  <style>
+    :root { --pad: 12px; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    #map { position: fixed; inset: 0; }
+    .panel { position: fixed; left: var(--pad); right: var(--pad); bottom: var(--pad); display: grid; gap: 8px; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+    .chip { padding: 8px 12px; border-radius: 999px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; user-select: none; }
+    .chip.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+    textarea, input { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 12px; background: rgba(255,255,255,.96); backdrop-filter: blur(6px); }
+    .btn { padding: 12px 16px; border: 0; border-radius: 14px; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+    .btn.primary { background: #0ea5e9; color: #fff; font-weight: 600; }
+    .btn.secondary { background: #f1f5f9; }
+    .badge { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: #e2e8f0; }
+    .glass { background: rgba(255,255,255,.86); border: 1px solid #e5e7eb; border-radius: 16px; padding: 8px; }
+    .topbar { position: fixed; top: var(--pad); left: var(--pad); display: flex; gap: 8px; align-items: center; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="topbar glass">
+    <button id="locate" class="btn secondary">📍 Use My Location</button>
+    <span id="gps" class="badge">GPS: —</span>
+    <span id="addr" class="badge">Address: —</span>
+    <span id="status" class="badge">Ready</span>
+  </div>
+  <div class="panel">
+    <div class="chips" id="reasons">
+      <div class="chip active" data-value="Knocked">Knocked</div>
+      <div class="chip" data-value="Talked">Talked</div>
+      <div class="chip" data-value="No Answer">No Answer</div>
+      <div class="chip" data-value="Damage Spotted">Damage Spotted</div>
+      <div class="chip" data-value="Not Interested">Not Interested</div>
+      <div class="chip" data-value="Come Back">Come Back</div>
+    </div>
+    <textarea id="notes" rows="2" placeholder="Quick notes (optional)…"></textarea>
+    <div class="row">
+      <button id="log" class="btn primary" style="flex:1">💾 One-Tap Log</button>
+      <button id="drop" class="btn secondary">📌 Drop Pin Here</button>
+    </div>
+  </div>
+
+  <!-- Bootstrap: load config then inject Maps with key -->
+  <script>
+    (async function boot() {
+      try {
+        const res = await fetch('config.json', {cache:'no-store'});
+        if (!res.ok) throw new Error('Missing config.json. Copy config.example.json to config.json and fill values.');
+        window.APP_CONFIG = await res.json();
+        const s = document.createElement('script');
+        const key = encodeURIComponent(window.APP_CONFIG.MAPS_API_KEY);
+        s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap`;
+        s.async = true;
+        document.body.appendChild(s);
+      } catch (e) {
+        alert('Config error: ' + e.message);
+      }
+    })();
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>

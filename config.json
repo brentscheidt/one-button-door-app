@@ -1,0 +1,11 @@
+{
+  "MAPS_API_KEY": "YOUR_MAPS_API_KEY",
+  "APPS_SCRIPT_URL": "https://script.google.com/macros/s/REPLACE_WITH_YOUR_EXEC_URL/exec",
+  "SHARED_SECRET": "REPLACE_WITH_YOUR_API_SECRET",
+  "DEFAULT_CENTER": {
+    "lat": 33.4484,
+    "lng": -112.074
+  },
+  "SOURCE_DEVICE": "web-mvp",
+  "VERSION": "v0.2"
+}
