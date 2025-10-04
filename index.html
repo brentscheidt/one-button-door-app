@@ -3,75 +3,67 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Door Knock Logger – v0.3.13</title>
+  <title>Door Knock Logger – v0.3.14</title>
   <style>
-    :root { --theme-color: #0ea5e9; }
+    :root { --color-brent: #0ea5e9; --color-paris: #22c55e; }
     html,body { margin:0; padding:0; height:100%; }
-    #map {
-      position:absolute; top:0; left:0; right:0; bottom:160px;
-    }
+    #map { position:absolute; top:0; left:0; right:0; bottom:150px; }
     .topbar {
-      position:absolute; top:12px; left:12px; right:12px;
+      position:absolute; top:8px; left:8px; right:8px;
       background:rgba(255,255,255,0.9); backdrop-filter:blur(6px);
-      border-radius:12px; padding:6px 8px; display:flex;
-      align-items:center; gap:8px; z-index:2;
-      font-family:system-ui,sans-serif;
+      border-radius:8px; padding:4px 6px;
+      display:flex; align-items:center; gap:6px; z-index:2;
+      font-family:system-ui,sans-serif; font-size:14px;
     }
-    #locate {
-      padding:4px 8px; font-size:14px; border-radius:8px;
-      border:1px solid #ccc; background:#fff; cursor:pointer;
-    }
+    #locate { border:none; background:none; font-size:20px; cursor:pointer; }
     .badge {
-      background:#f1f5f9; border-radius:12px;
+      background:#f1f5f9; border-radius:8px;
       padding:4px 8px; font-size:13px;
     }
-    #status { min-width:80px; text-align:center; }
-    #user-btn {
-      width:32px; height:32px; border-radius:16px;
-      border:1px solid #ccc; background:#fff; color:#444;
-      display:flex; align-items:center; justify-content:center;
-      font-weight:bold; cursor:pointer;
+    #user-select {
+      border-radius:16px; border:1px solid #ccc;
+      padding:4px 8px; font-size:14px;
+      background:#fff;
+      appearance:none;
+      cursor:pointer;
     }
-    #user-btn.brent {
-      background:var(--theme-color);
-      border-color:var(--theme-color);
-      color:#fff;
+    #user-select.brent {
+      background:var(--color-brent); border-color:var(--color-brent);
+      color:#fff; width:32px; text-align:center;
     }
-    #user-btn.paris {
-      background:#22c55e;
-      border-color:#22c55e;
-      color:#fff;
+    #user-select.paris {
+      background:var(--color-paris); border-color:var(--color-paris);
+      color:#fff; width:32px; text-align:center;
     }
     .panel {
-      position:absolute; left:12px; right:12px; bottom:12px;
-      background:#fff; border-radius:12px; padding:12px;
+      position:absolute; left:8px; right:8px; bottom:8px;
+      background:#fff; border-radius:12px; padding:8px;
       box-shadow:0 2px 8px rgba(0,0,0,0.1);
-      display:grid; gap:8px; z-index:2;
+      display:grid; gap:6px; z-index:2;
       font-family:system-ui,sans-serif;
     }
-    .chips { display:flex; gap:8px; flex-wrap:wrap; }
+    .chips { display:flex; gap:6px; flex-wrap:wrap; }
     .chip {
-      padding:8px 12px; border-radius:16px;
+      padding:6px 10px; border-radius:12px;
       border:1px solid #e2e8f0; background:#fff;
-      cursor:pointer; font-size:14px; opacity:0.6;
+      cursor:pointer; font-size:13px; opacity:0.6;
       pointer-events:none;
     }
     .chip.active {
-      background:var(--theme-color);
-      border-color:var(--theme-color);
+      background:var(--color-brent); border-color:var(--color-brent);
       color:#fff; opacity:1;
     }
     textarea {
-      width:100%; padding:10px 12px; border-radius:12px;
+      width:100%; padding:8px 10px; border-radius:8px;
       border:1px solid #e5e7eb; font-size:14px; resize:vertical;
     }
-    .row { display:flex; gap:8px; }
+    .row { display:flex; gap:6px; }
     .btn {
-      flex:1; border:none; border-radius:14px;
-      padding:12px; font-size:16px; cursor:pointer;
+      flex:1; border:none; border-radius:12px;
+      padding:10px; font-size:15px; cursor:pointer;
       opacity:0.6; pointer-events:none;
     }
-    .btn.primary { background:var(--theme-color); color:#fff; }
+    .btn.primary { background:var(--color-brent); color:#fff; }
     .btn.secondary { background:#f1f5f9; color:#111; }
     .btn.enabled { opacity:1; pointer-events:auto; }
   </style>
@@ -82,8 +74,11 @@
   <div class="topbar">
     <button id="locate">📍</button>
     <span id="addr" class="badge">Address: —</span>
-    <span id="status" class="badge">Select user</span>
-    <button id="user-btn">?</button>
+    <select id="user-select">
+      <option value="">User</option>
+      <option value="brent">B</option>
+      <option value="paris">P</option>
+    </select>
   </div>
 
   <div class="panel">
@@ -95,7 +90,7 @@
       <div class="chip" data-value="Not Interested">Not Interested</div>
       <div class="chip" data-value="Come Back">Come Back</div>
     </div>
-    <textarea id="notes" rows="2" placeholder="Quick notes (optional)…"></textarea>
+    <textarea id="notes" rows="2" placeholder="Quick notes…"></textarea>
     <div class="row">
       <button id="log" class="btn primary">Select user</button>
       <button id="drop" class="btn secondary btn enabled">📌</button>

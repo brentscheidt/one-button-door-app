@@ -1,23 +1,21 @@
-// Door Knock Logger — Frontend v0.3.13
+// Frontend v0.3.14
 
 const APP_CONFIG = {
   ENDPOINT: 'https://script.google.com/macros/s/AKfycbwTq0s0mFo3Vd70JI0fOA66h_4jB-ehE7msfsK6i4JrHbxxgxmwL9NE0l3fGa29IhZY/exec',
-  VERSION: 'v0.3.13'
+  VERSION: 'v0.3.14'
 };
 
 let map, marker, geocoder, pins = [];
 let lastAddr = null, lastLL = null;
-let user = '';   // '' | 'brent' | 'paris'
-let reason = '';
+let user = '', reason = '';
 
 window.initMap = () => {
   geocoder = new google.maps.Geocoder();
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat:33.4484, lng:-112.0740 },
-    zoom: 19,
-    mapTypeId: 'hybrid',
-    tilt: 0,
-    heading: 0,
+    zoom:19,
+    mapTypeId:'hybrid',
+    tilt:0, heading:0,
     rotateControl:false,
     streetViewControl:false,
     fullscreenControl:false,
@@ -32,22 +30,24 @@ window.initMap = () => {
     reverseGeocode(p);
   });
 
-  document.getElementById('locate').onclick    = useMyLoc;
-  document.getElementById('drop').onclick      = () => {
+  // UI
+  document.getElementById('locate').onclick   = useMyLoc;
+  document.getElementById('drop').onclick     = () => {
     const c = map.getCenter();
     setMarker(c);
     reverseGeocode(c);
   };
-  document.getElementById('user-btn').onclick  = cycleUser;
-  document.querySelectorAll('.chip').forEach(c => c.onclick = onReasonChoosen);
-  document.getElementById('log').onclick       = onLog;
+  document.getElementById('user-select').onchange = onUserChange;
+  document.querySelectorAll('.chip').forEach(c => c.onclick = onReason);
+  document.getElementById('log').onclick      = onLog;
 
   useMyLoc();
   loadPins();
 };
 
-function setStatus(text) {
-  document.getElementById('status').textContent = text;
+function setStatus(t) {
+  document.getElementById('log').textContent = t;
+  document.getElementById('status')?.textContent = t;
 }
 
 function setMarker(ll) {
@@ -76,88 +76,72 @@ function useMyLoc() {
     reverseGeocode(ll);
   },e=>{
     console.warn(e);
-    setStatus('Location error');
+    setStatus('Loc error');
   },{ enableHighAccuracy:true });
 }
 
-function cycleUser() {
-  if (user === '')        user = 'brent';
-  else if (user === 'brent')  user = 'paris';
-  else                       user = '';
-  const btn = document.getElementById('user-btn');
-  btn.className = '';
+function onUserChange(e) {
+  user = e.target.value;      // ''|'brent'|'paris'
+  const sel = e.target;
+  sel.className = '';
+  if (user==='brent') sel.classList.add('brent');
+  else if (user==='paris') sel.classList.add('paris');
   reason = '';
-  document.querySelectorAll('.chip').forEach(c=>{
-    c.classList.remove('active');
-  });
-  if (user==='brent') btn.classList.add('brent'), btn.textContent='B';
-  else if (user==='paris') btn.classList.add('paris'), btn.textContent='P';
-  else btn.textContent='?';
-  setStatus(user? 'Ready':'Select user');
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+  setStatus(user? '💾 One-Tap Log':'Select user');
   updateControls();
 }
 
-function onReasonChoosen(evt) {
+function onReason(evt) {
   if (!user) return;
   reason = evt.currentTarget.dataset.value;
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
   evt.currentTarget.classList.add('active');
+  setStatus('💾 One-Tap Log');
+  updateControls();
 }
 
 function updateControls() {
-  const hasLocation = !!lastAddr;
-  const hasUser     = !!user;
-  document.querySelectorAll('.chip').forEach(c => {
-    c.style.pointerEvents = hasUser && hasLocation ? 'auto' : 'none';
-    c.style.opacity       = hasUser && hasLocation ? '1' : '0.6';
-  });
-
+  const ready = !!user && !!lastAddr && !!reason;
+  document.querySelectorAll('.chip')
+    .forEach(c=>{
+      c.style.pointerEvents = user? 'auto':'none';
+      c.style.opacity       = user? '1':'0.6';
+    });
   const logBtn = document.getElementById('log');
-  const canLog = hasUser && hasLocation && !!reason;
-  logBtn.classList.toggle('enabled', canLog);
-  logBtn.textContent = canLog
-    ? '💾 One-Tap Log'
-    : ( user ? 'Select reason' : 'Select user' );
-
-  ['locate','drop'].forEach(id=>{
-    document.getElementById(id).classList.add('enabled');
-  });
+  logBtn.classList.toggle('enabled', ready);
+  logBtn.disabled = !ready;
 }
 
 async function onLog() {
-  if (!user)             return setStatus('Select user');
-  if (!lastLL || !lastAddr) return setStatus('Waiting for GPS');
-  if (!reason)           return setStatus('Select reason');
+  if (!user)    return setStatus('Select user');
+  if (!lastLL)  return setStatus('Waiting GPS');
+  if (!reason)  return setStatus('Select reason');
 
   setStatus('Saving…');
-  const payload = {
-    timestamp: new Date().toISOString(),
-    user_email: user==='paris'
-      ? 'paris.wilcox@rocky.edu'
-      : 'brent@tscstudios.com',
-    lat: lastLL.lat(),
-    lng: lastLL.lng(),
-    address: lastAddr,
-    notes: document.getElementById('notes').value.trim(),
-    reason,
-    source_device:'web-mvp',
-    version: APP_CONFIG.VERSION
-  };
-
   try {
     const res = await fetch(APP_CONFIG.ENDPOINT, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        user_email: user==='paris'
+          ? 'paris.wilcox@rocky.edu'
+          : 'brent@tscstudios.com',
+        lat: lastLL.lat(), lng: lastLL.lng(),
+        address: lastAddr,
+        notes: document.getElementById('notes').value.trim(),
+        reason,
+        source_device:'web-mvp',
+        version:APP_CONFIG.VERSION
+      })
     });
     const { ok, error } = await res.json();
     if (ok) {
       setStatus('✅ Saved');
       document.getElementById('notes').value = '';
       loadPins();
-    } else {
-      setStatus('⚠️ '+error);
-    }
+    } else setStatus('⚠️ '+error);
   } catch(err) {
     console.error(err);
     setStatus('⚠️ Save failed');
@@ -177,16 +161,16 @@ async function loadPins() {
         map,
         icon:{url:'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
       });
-      m.addListener('click',()=>{
+      m.addListener('click',()=> {
         new google.maps.InfoWindow({
           content:`<strong>${r.address}</strong><br>
-                   <em>${r.status}</em><br>
-                   Notes: ${r.notes||'<none>'}`
+                  <em>${r.status}</em><br>
+                  Notes: ${r.notes||'<none>'}`
         }).open(map,m);
       });
       return m;
     }).filter(Boolean);
   } catch(err) {
-    console.error('Could not load pins', err);
+    console.error(err);
   }
 }
