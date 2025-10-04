@@ -1,21 +1,23 @@
-// Door Knock Logger — Frontend v0.3.9
+// Door Knock Logger — Frontend v0.3.11
 
 const APP_CONFIG = {
   ENDPOINT: 'https://script.google.com/macros/s/AKfycbwTq0s0mFo3Vd70JI0fOA66h_4jB-ehE7msfsK6i4JrHbxxgxmwL9NE0l3fGa29IhZY/exec',
-  VERSION: 'v0.3.9'
+  VERSION: 'v0.3.11'
 };
 
 let map, marker, geocoder;
 let lastAddr = null, lastLL = null;
 let userState = 0;  // 0='?',1='brent',2='paris'
 
-// Google Maps callback
 window.initMap = () => {
   geocoder = new google.maps.Geocoder();
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat:33.4484, lng:-112.0740 },
-    zoom: 19,
-    mapTypeId: 'satellite',
+    zoom:19,
+    mapTypeId:'satellite',
+    tilt:0,
+    heading:0,
+    rotateControl:false,
     streetViewControl:false,
     fullscreenControl:false,
     mapTypeControl:false
@@ -29,24 +31,23 @@ window.initMap = () => {
     reverseGeocode(p);
   });
 
-  // UI binds
-  document.getElementById('locate').onclick = useMyLoc;
-  document.getElementById('drop').onclick   = () => {
-    const c = map.getCenter();
-    setMarker(c);
-    reverseGeocode(c);
+  document.getElementById('locate').onclick   = useMyLoc;
+  document.getElementById('drop').onclick     = () => {
+    const c = map.getCenter(); setMarker(c); reverseGeocode(c);
   };
-  document.getElementById('log').onclick    = onLog;
+  document.getElementById('log').onclick      = onLog;
   document.getElementById('user-btn').onclick = cycleUser;
+
   document.querySelectorAll('.chip').forEach(c => {
     c.onclick = () => {
+      if (userState === 0) return;      // no reason if no user
       document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
       c.classList.add('active');
     };
   });
 
   useMyLoc();
-  loadPins().catch(()=>{});
+  loadPins();
 };
 
 function setStatus(t) {
@@ -56,54 +57,59 @@ function setStatus(t) {
 function setMarker(ll) {
   lastLL = ll;
   marker.setPosition(ll);
-  document.getElementById('gps').textContent =
-    `GPS: ${ll.lat().toFixed(5)}, ${ll.lng().toFixed(5)}`;
 }
 
 function reverseGeocode(ll) {
   geocoder.geocode({ location: ll }, (res,st) => {
-    if(st==='OK'&&res[0]) {
+    if (st==='OK' && res[0]) {
       lastAddr = res[0].formatted_address;
       document.getElementById('addr').textContent = `Address: ${lastAddr}`;
       setStatus('Ready');
-    } else setStatus('Geocode failed');
+    } else {
+      setStatus('Geocode failed');
+    }
   });
 }
 
 function useMyLoc() {
-  if(!navigator.geolocation) return setStatus('No geo');
-  navigator.geolocation.getCurrentPosition(p=>{
-    const ll = new google.maps.LatLng(p.coords.latitude,p.coords.longitude);
+  if (!navigator.geolocation) return setStatus('No geo');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const ll = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
     map.setCenter(ll);
     setMarker(ll);
     reverseGeocode(ll);
-  },e=>{console.warn(e); setStatus('Location error');},{enableHighAccuracy:true});
+  }, err=>{
+    console.warn(err);
+    setStatus('Location error');
+  },{ enableHighAccuracy:true });
 }
 
-// Cycle user: ?, B, P
 function cycleUser() {
-  userState = (userState+1)%3;
+  userState = (userState + 1) % 3;
   const btn = document.getElementById('user-btn');
   btn.className = '';
-  if(userState===1) {
-    btn.textContent='B';
+  document.querySelectorAll('.chip').forEach(x=> x.classList.remove('active'));
+  if (userState === 1) {
+    btn.textContent = 'B';
     btn.classList.add('brent');
     document.documentElement.style.setProperty('--theme-color','#0ea5e9');
-  } else if(userState===2) {
-    btn.textContent='P';
+  } else if (userState === 2) {
+    btn.textContent = 'P';
     btn.classList.add('paris');
     document.documentElement.style.setProperty('--theme-color','#22c55e');
   } else {
-    btn.textContent='?';
+    btn.textContent = '?';
     document.documentElement.style.setProperty('--theme-color','#0ea5e9');
   }
+  setStatus(userState===0 ? 'Select user' : 'Ready');
 }
 
-// One-Tap Log
-function onLog() {
-  if(userState===0)            return setStatus('Select user');
-  if(!lastLL || !lastAddr)     return setStatus('Waiting for GPS');
-  const reason = document.querySelector('.chip.active').dataset.value;
+async function onLog() {
+  if (userState === 0)       return setStatus('Select user');
+  if (!lastLL || !lastAddr)  return setStatus('Waiting for GPS');
+
+  const reasonEl = document.querySelector('.chip.active');
+  const reason = reasonEl ? reasonEl.dataset.value : '';
   const payload = {
     timestamp: new Date().toISOString(),
     user_email: userState===2
@@ -112,43 +118,61 @@ function onLog() {
     lat: lastLL.lat(),
     lng: lastLL.lng(),
     address: lastAddr,
-    city:'', state:'', zip:'',
     notes: document.getElementById('notes').value.trim(),
     reason,
+    source_device:'web-mvp',
     version: APP_CONFIG.VERSION
   };
+
   setStatus('Saving…');
-  fetch(APP_CONFIG.ENDPOINT, {
-    method:'POST',
-    mode:'no-cors',
-    headers:{ 'Content-Type':'application/json' },
-    body: JSON.stringify(payload)
-  })
-  .then(()=>{
-    setStatus('✅ Saved');
-    document.getElementById('notes').value='';
-    loadPins().catch(()=>{});
-  })
-  .catch(e=>{
-    console.error(e);
+  try {
+    const res = await fetch(APP_CONFIG.ENDPOINT, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if (result.ok) {
+      setStatus('✅ Saved');
+      document.getElementById('notes').value = '';
+      loadPins();
+    } else {
+      setStatus('⚠️ '+ (result.error||'save failed'));
+    }
+  } catch(err) {
+    console.error(err);
     setStatus('⚠️ Save failed');
-  });
+  }
 }
 
-// GET & render pins
 async function loadPins() {
-  const res = await fetch(APP_CONFIG.ENDPOINT);
-  const rows = await res.json();
-  if(!map) return;
-  if(map._pins) map._pins.forEach(m=>m.setMap(null));
-  map._pins = [];
-  rows.forEach(r=>{
-    const la=+r.lat, ln=+r.lng;
-    if(!la||!ln) return;
-    map._pins.push(new google.maps.Marker({
-      position:{lat:la,lng:ln},
-      map,
-      icon:{url:'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
-    }));
-  });
+  try {
+    const res = await fetch(APP_CONFIG.ENDPOINT);
+    const rows = await res.json();
+    if (!map) return;
+    // clear old
+    if (map._pins) map._pins.forEach(m=>m.setMap(null));
+    map._pins = [];
+
+    rows.forEach(r=>{
+      const la = parseFloat(r.lat), ln = parseFloat(r.lng);
+      if (!la||!ln) return;
+      const m = new google.maps.Marker({
+        position:{lat:la,lng:ln},
+        map,
+        icon:{url:'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
+      });
+      m.addListener('click', ()=> {
+        const content = `
+          <strong>${r.address}</strong><br>
+          <em>${r.status}</em><br>
+          Notes: ${r.notes||'<none>'}
+        `;
+        new google.maps.InfoWindow({ content }).open(map, m);
+      });
+      map._pins.push(m);
+    });
+  } catch(err) {
+    console.error('Load pins failed', err);
+  }
 }

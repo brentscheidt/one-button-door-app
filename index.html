@@ -3,68 +3,65 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Door Knock Logger – v0.3.9</title>
+  <title>Door Knock Logger – v0.3.11</title>
   <style>
     :root { --theme-color: #0ea5e9; }
-    html,body,#map { height:100%;margin:0;padding:0; }
+    html,body { margin:0; padding:0; height:100%; }
+    #map {
+      position:absolute; top:0; left:0; right:0; bottom:160px;
+    }
     .topbar {
       position:absolute; top:12px; left:12px; right:12px;
       background:rgba(255,255,255,0.9); backdrop-filter:blur(6px);
       border-radius:12px; padding:8px; display:flex;
-      align-items:center; gap:8px; font-family:system-ui,sans-serif;
-      z-index:2;
+      align-items:center; gap:8px; z-index:2;
+      font-family:system-ui,sans-serif;
     }
     .badge {
       background:#f1f5f9; border-radius:12px;
       padding:4px 8px; font-size:13px;
     }
+    #gps { display:none; }
     #user-btn {
       width:32px; height:32px; border-radius:16px;
       border:1px solid #ccc; background:#fff; color:#444;
-      font-weight:bold; display:flex; align-items:center;
-      justify-content:center; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      font-weight:bold; cursor:pointer;
     }
     #user-btn.brent {
-      background:var(--theme-color);
-      border-color:var(--theme-color);
-      color:#fff;
+      background:var(--theme-color); border-color:var(--theme-color); color:#fff;
     }
     #user-btn.paris {
-      background:#22c55e;
-      border-color:#22c55e;
-      color:#fff;
+      background:#22c55e; border-color:#22c55e; color:#fff;
     }
     .panel {
-      position:absolute; bottom:12px; left:12px; right:12px;
-      display:grid; gap:8px; font-family:system-ui,sans-serif;
-      z-index:2;
+      position:absolute; left:12px; right:12px; bottom:12px;
+      background:#fff; border-radius:12px; padding:12px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
+      display:grid; gap:8px; z-index:2;
+      font-family:system-ui,sans-serif;
     }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
     .chip {
       padding:8px 12px; border-radius:16px;
       border:1px solid #e2e8f0; background:#fff;
-      cursor:pointer; user-select:none; font-size:14px;
+      cursor:pointer; font-size:14px;
     }
     .chip.active {
-      background:var(--theme-color);
-      border-color:var(--theme-color);
+      background:var(--theme-color); border-color:var(--theme-color);
       color:#fff;
     }
     textarea {
       width:100%; padding:10px 12px; border-radius:12px;
       border:1px solid #e5e7eb; font-size:14px; resize:vertical;
     }
+    .row { display:flex; gap:8px; }
     .btn {
-      border:none; border-radius:14px; padding:12px;
-      font-size:16px; cursor:pointer;
+      flex:1; border:none; border-radius:14px;
+      padding:12px; font-size:16px; cursor:pointer;
     }
-    .btn.primary {
-      background:var(--theme-color); color:#fff; font-weight:600;
-    }
-    .btn.secondary {
-      background:#f1f5f9; color:#111;
-    }
-    .row { display:flex; gap:8px; align-items:center; }
+    .btn.primary { background:var(--theme-color); color:#fff; }
+    .btn.secondary { background:#f1f5f9; color:#111; }
   </style>
 </head>
 <body>
@@ -72,7 +69,6 @@
 
   <div class="topbar">
     <button id="locate" class="btn secondary">📍 Use My Location</button>
-    <span id="gps" class="badge">GPS: —</span>
     <span id="addr" class="badge">Address: —</span>
     <span id="status" class="badge">Ready</span>
     <button id="user-btn">?</button>
@@ -89,7 +85,7 @@
     </div>
     <textarea id="notes" rows="2" placeholder="Quick notes (optional)…"></textarea>
     <div class="row">
-      <button id="log" class="btn primary" style="flex:1">💾 One-Tap Log</button>
+      <button id="log" class="btn primary">💾 One-Tap Log</button>
       <button id="drop" class="btn secondary">📌 Drop Pin Here</button>
     </div>
   </div>

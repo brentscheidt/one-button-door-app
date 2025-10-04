@@ -1,35 +1,81 @@
-/** Door Knock Logger — Backend v0.3.3 */
-const CONFIG = { SHEET_NAME: 'Knocks', VERSION: 'v0.3.3' };
+/** Door Knock Logger — Backend v0.3.11 */
+
+const CONFIG = {
+  SHEET_ID   : '1wNAbDpUqe5C0kq_ty4MPi3dHVWjsKHtfkx5o9BIoHn4',
+  SHEET_NAME : 'DoorKnockLog',
+  VERSION    : 'v0.3.11',
+  ALLOWED    : ['brent@tscstudios.com','paris.wilcox@rocky.edu'],
+  PUBLIC_GET : true
+};
 
 function _sheet() {
-  const ss = SpreadsheetApp.getActive();
-  const sh = ss.getSheetByName(CONFIG.SHEET_NAME) || ss.insertSheet(CONFIG.SHEET_NAME);
-  if (sh.getLastRow() === 0) {
-    sh.appendRow(['server_ts','client_ts','user_email','lat','lng','address','city','state','zip','homeowner_name','status','condition','interest_level','notes','follow_up_iso','photo_url','source_device','version']);
-  }
-  return sh;
+  return SpreadsheetApp.openById(CONFIG.SHEET_ID)
+           .getSheetByName(CONFIG.SHEET_NAME);
 }
 
 function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents);
-    var sh = _sheet();
-    sh.appendRow([ new Date(), data.timestamp, data.user_email || '', data.lat, data.lng, data.address, data.city, data.state, data.zip, '', '', '', '', '', '', '', 'web', CONFIG.VERSION ]);
-    return ContentService.createTextOutput("Success");
-  } catch (err) { return ContentService.createTextOutput("Error: " + err); }
+    const data = JSON.parse(e.postData.contents);
+    const email = (data.user_email||'').toLowerCase().trim();
+    if (!CONFIG.ALLOWED.includes(email)) {
+      throw 'unauthorized';
+    }
+
+    const sh = _sheet();
+    sh.appendRow([
+      new Date(),
+      email,
+      '',
+      data.lat||'',
+      data.lng||'',
+      data.address||'',
+      data.city||'',
+      data.state||'',
+      data.zip||'',
+      '',
+      data.reason||'',
+      '',
+      '',
+      data.notes||'',
+      '',
+      '',
+      data.source_device||'web',
+      CONFIG.VERSION
+    ]);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok:true }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok:false, error:String(err) }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function doGet(e) {
-  try {
-    var sh = _sheet();
-    var data = sh.getDataRange().getValues();
-    var headers = data[0];
-    var rows = [];
-    for (var i = 1; i < data.length; i++) {
-      var row = {};
-      for (var j = 0; j < headers.length; j++) row[headers[j]] = data[i][j];
-      rows.push(row);
-    }
-    return ContentService.createTextOutput(JSON.stringify(rows)).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) { return ContentService.createTextOutput("Error: " + err); }
+  if (!CONFIG.PUBLIC_GET) {
+    return ContentService
+      .createTextOutput('[]')
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  const sh = _sheet();
+  const data = sh.getDataRange().getValues();
+  const [hdr, ...rows] = data;
+  const col = Object.fromEntries(hdr.map((h,i)=>[h.toLowerCase(), i]));
+  const result = rows.map(r=>({
+    lat:       r[col.lat],
+    lng:       r[col.lng],
+    address:   r[col.address],
+    city:      r[col.city],
+    state:     r[col.state],
+    zip:       r[col.zip],
+    status:    r[col.status],
+    notes:     r[col.notes],
+    user_email:r[col.user_email]
+  })).filter(r=>r.lat && r.lng);
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
 }
