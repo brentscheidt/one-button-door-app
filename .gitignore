@@ -21,6 +21,7 @@ coverage/
 # Environment / secrets
 config.json
 .env
+app.config.js
 *.local
 
 # Editors

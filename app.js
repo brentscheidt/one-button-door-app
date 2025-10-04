@@ -3,8 +3,9 @@
 const APP_CONFIG = {
   ENDPOINT : 'https://script.google.com/macros/s/AKfycbwTq0s0mFo3Vd70JI0fOA66h_4jB-ehE7msfsK6i4JrHbxxgxmwL9NE0l3fGa29IhZY/exec',
   MAPS_KEY : 'AIzaSyB0F-GLFjHHe9XKPAEHJdr5byv20WG_k3Q',
-  VERSION  : 'v0.3.3'
+  VERSION  : 'v0.3.4'
 };
+
 
 const DEBUG = false;
 function debug(msg, obj) {
