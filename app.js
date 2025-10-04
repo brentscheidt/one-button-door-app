@@ -1,8 +1,8 @@
-// Frontend v0.3.14
+// Frontend v0.3.15
 
 const APP_CONFIG = {
   ENDPOINT: 'https://script.google.com/macros/s/AKfycbwTq0s0mFo3Vd70JI0fOA66h_4jB-ehE7msfsK6i4JrHbxxgxmwL9NE0l3fGa29IhZY/exec',
-  VERSION: 'v0.3.14'
+  VERSION: 'v0.3.15'
 };
 
 let map, marker, geocoder, pins = [];
@@ -30,25 +30,19 @@ window.initMap = () => {
     reverseGeocode(p);
   });
 
-  // UI
-  document.getElementById('locate').onclick   = useMyLoc;
-  document.getElementById('drop').onclick     = () => {
+  document.getElementById('locate').onclick         = useMyLoc;
+  document.getElementById('drop').onclick           = () => {
     const c = map.getCenter();
     setMarker(c);
     reverseGeocode(c);
   };
-  document.getElementById('user-select').onchange = onUserChange;
+  document.getElementById('user-select').onchange   = onUserChange;
   document.querySelectorAll('.chip').forEach(c => c.onclick = onReason);
-  document.getElementById('log').onclick      = onLog;
+  document.getElementById('log').onclick            = onLog;
 
   useMyLoc();
   loadPins();
 };
-
-function setStatus(t) {
-  document.getElementById('log').textContent = t;
-  document.getElementById('status')?.textContent = t;
-}
 
 function setMarker(ll) {
   lastLL = ll;
@@ -61,90 +55,93 @@ function reverseGeocode(ll) {
       lastAddr = res[0].formatted_address;
       document.getElementById('addr').textContent = `Address: ${lastAddr}`;
       updateControls();
-    } else {
-      setStatus('Geocode failed');
     }
   });
 }
 
 function useMyLoc() {
-  if (!navigator.geolocation) return setStatus('No geo');
-  navigator.geolocation.getCurrentPosition(p=>{
+  navigator.geolocation?.getCurrentPosition(p => {
     const ll = new google.maps.LatLng(p.coords.latitude, p.coords.longitude);
     map.setCenter(ll);
     setMarker(ll);
     reverseGeocode(ll);
-  },e=>{
-    console.warn(e);
-    setStatus('Loc error');
-  },{ enableHighAccuracy:true });
+  }, ()=>{}, { enableHighAccuracy:true });
 }
 
 function onUserChange(e) {
-  user = e.target.value;      // ''|'brent'|'paris'
+  user = e.target.value;      // '' | 'brent' | 'paris'
   const sel = e.target;
   sel.className = '';
   if (user==='brent') sel.classList.add('brent');
   else if (user==='paris') sel.classList.add('paris');
   reason = '';
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
-  setStatus(user? '💾 One-Tap Log':'Select user');
   updateControls();
 }
 
 function onReason(evt) {
-  if (!user) return;
   reason = evt.currentTarget.dataset.value;
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
   evt.currentTarget.classList.add('active');
-  setStatus('💾 One-Tap Log');
-  updateControls();
 }
 
 function updateControls() {
-  const ready = !!user && !!lastAddr && !!reason;
-  document.querySelectorAll('.chip')
-    .forEach(c=>{
-      c.style.pointerEvents = user? 'auto':'none';
-      c.style.opacity       = user? '1':'0.6';
-    });
-  const logBtn = document.getElementById('log');
-  logBtn.classList.toggle('enabled', ready);
-  logBtn.disabled = !ready;
+  const hasUser    = !!user;
+  const hasAddress = !!lastAddr;
+  const logBtn     = document.getElementById('log');
+
+  // bottom button text + state
+  if (!hasUser) {
+    logBtn.textContent = 'Select user';
+    logBtn.classList.remove('enabled');
+    logBtn.disabled = true;
+  } else if (!hasAddress) {
+    logBtn.textContent = 'Waiting GPS';
+    logBtn.classList.remove('enabled');
+    logBtn.disabled = true;
+  } else {
+    logBtn.textContent = '💾 One-Tap Log';
+    logBtn.classList.add('enabled');
+    logBtn.disabled = false;
+  }
+
+  // chips only need user
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.style.pointerEvents = hasUser ? 'auto':'none';
+    c.style.opacity       = hasUser ? '1':'0.6';
+  });
 }
 
 async function onLog() {
-  if (!user)    return setStatus('Select user');
-  if (!lastLL)  return setStatus('Waiting GPS');
-  if (!reason)  return setStatus('Select reason');
-
-  setStatus('Saving…');
+  const btn = document.getElementById('log');
+  if (btn.disabled) return;
+  const payload = {
+    timestamp: new Date().toISOString(),
+    user_email: user==='paris'
+      ? 'paris.wilcox@rocky.edu'
+      : 'brent@tscstudios.com',
+    lat: lastLL.lat(), lng: lastLL.lng(),
+    address: lastAddr,
+    notes: document.getElementById('notes').value.trim(),
+    reason,            // optional
+    source_device:'web-mvp',
+    version:APP_CONFIG.VERSION
+  };
+  btn.textContent = 'Saving…';
   try {
     const res = await fetch(APP_CONFIG.ENDPOINT, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({
-        timestamp: new Date().toISOString(),
-        user_email: user==='paris'
-          ? 'paris.wilcox@rocky.edu'
-          : 'brent@tscstudios.com',
-        lat: lastLL.lat(), lng: lastLL.lng(),
-        address: lastAddr,
-        notes: document.getElementById('notes').value.trim(),
-        reason,
-        source_device:'web-mvp',
-        version:APP_CONFIG.VERSION
-      })
+      body: JSON.stringify(payload)
     });
     const { ok, error } = await res.json();
+    btn.textContent = ok ? '✅ Saved' : `⚠️ ${error}`;
     if (ok) {
-      setStatus('✅ Saved');
       document.getElementById('notes').value = '';
       loadPins();
-    } else setStatus('⚠️ '+error);
-  } catch(err) {
-    console.error(err);
-    setStatus('⚠️ Save failed');
+    }
+  } catch {
+    btn.textContent = '⚠️ Save failed';
   }
 }
 
@@ -161,16 +158,14 @@ async function loadPins() {
         map,
         icon:{url:'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
       });
-      m.addListener('click',()=> {
+      m.addListener('click',()=>{
         new google.maps.InfoWindow({
           content:`<strong>${r.address}</strong><br>
-                  <em>${r.status}</em><br>
-                  Notes: ${r.notes||'<none>'}`
+                   <em>${r.status}</em><br>
+                   Notes: ${r.notes||'<none>'}`
         }).open(map,m);
       });
       return m;
     }).filter(Boolean);
-  } catch(err) {
-    console.error(err);
-  }
+  } catch{}
 }
