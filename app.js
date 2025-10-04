@@ -1,142 +1,133 @@
-// Door Knock Logger — Frontend v0.3.6 (complete)
+// Door Knock Logger — Frontend v0.3.9
 
 const APP_CONFIG = {
-  ENDPOINT : 'https://script.google.com/macros/s/AKfycbwTq0s0mFo3Vd70JI0fOA66h_4jB-ehE7msfsK6i4JrHbxxgxmwL9NE0l3fGa29IhZY/exec',
-  VERSION  : 'v0.3.6'
+  ENDPOINT: 'https://script.google.com/macros/s/AKfycbwTq0s0mFo3Vd70JI0fOA66h_4jB-ehE7msfsK6i4JrHbxxgxmwL9NE0l3fGa29IhZY/exec',
+  VERSION: 'v0.3.9'
 };
 
 let map, marker, geocoder;
-let lastAddress = null, lastLatLng = null;
-let selectedUser = null;
+let lastAddr = null, lastLL = null;
+let userState = 0;  // 0='?',1='brent',2='paris'
 
-window.initMap = function() {
+// Google Maps callback
+window.initMap = () => {
   geocoder = new google.maps.Geocoder();
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat:33.4484, lng:-112.0740 },
-    zoom:16,
-    mapTypeControl:false,
+    zoom: 19,
+    mapTypeId: 'satellite',
     streetViewControl:false,
-    fullscreenControl:false
+    fullscreenControl:false,
+    mapTypeControl:false
   });
   marker = new google.maps.Marker({ map, draggable:true });
 
   map.addListener('click', e => { setMarker(e.latLng); reverseGeocode(e.latLng); });
   marker.addListener('dragend', () => {
-    const pos = marker.getPosition();
-    setMarker(pos);
-    reverseGeocode(pos);
+    const p = marker.getPosition();
+    setMarker(p);
+    reverseGeocode(p);
   });
 
-  document.getElementById('locate').onclick = useMyLocation;
+  // UI binds
+  document.getElementById('locate').onclick = useMyLoc;
   document.getElementById('drop').onclick   = () => {
     const c = map.getCenter();
     setMarker(c);
     reverseGeocode(c);
   };
   document.getElementById('log').onclick    = onLog;
-  document.getElementById('user-brent').onclick = ()=>setUser('brent');
-  document.getElementById('user-paris').onclick = ()=>setUser('paris');
-  document.querySelectorAll('.chip').forEach(c=>{
-    c.onclick = ()=> {
+  document.getElementById('user-btn').onclick = cycleUser;
+  document.querySelectorAll('.chip').forEach(c => {
+    c.onclick = () => {
       document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
       c.classList.add('active');
     };
   });
 
-  useMyLocation();
-  loadExistingPins().catch(()=>{});
+  useMyLoc();
+  loadPins().catch(()=>{});
 };
 
-function setStatus(txt) {
-  document.getElementById('status').textContent = txt;
+function setStatus(t) {
+  document.getElementById('status').textContent = t;
 }
 
-function setMarker(latLng) {
-  lastLatLng = latLng;
-  marker.setPosition(latLng);
+function setMarker(ll) {
+  lastLL = ll;
+  marker.setPosition(ll);
   document.getElementById('gps').textContent =
-    `GPS: ${latLng.lat().toFixed(5)}, ${latLng.lng().toFixed(5)}`;
+    `GPS: ${ll.lat().toFixed(5)}, ${ll.lng().toFixed(5)}`;
 }
 
-function reverseGeocode(latLng) {
-  geocoder.geocode({ location: latLng }, (results, status) => {
-    if(status==='OK' && results[0]) {
-      const comps = results[0].address_components;
-      const find = t => (comps.find(c=>c.types.includes(t))||{}).long_name||'';
-      lastAddress = {
-        formatted: results[0].formatted_address||'',
-        city: find('locality')||find('postal_town')||'',
-        state: find('administrative_area_level_1')||'',
-        zip: find('postal_code')||''
-      };
-      document.getElementById('addr').textContent =
-        `Address: ${lastAddress.formatted}`;
+function reverseGeocode(ll) {
+  geocoder.geocode({ location: ll }, (res,st) => {
+    if(st==='OK'&&res[0]) {
+      lastAddr = res[0].formatted_address;
+      document.getElementById('addr').textContent = `Address: ${lastAddr}`;
       setStatus('Ready');
     } else setStatus('Geocode failed');
   });
 }
 
-function useMyLocation() {
+function useMyLoc() {
   if(!navigator.geolocation) return setStatus('No geo');
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const ll = new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+  navigator.geolocation.getCurrentPosition(p=>{
+    const ll = new google.maps.LatLng(p.coords.latitude,p.coords.longitude);
     map.setCenter(ll);
     setMarker(ll);
     reverseGeocode(ll);
-  }, err=>{
-    console.warn(err);
-    setStatus('Location error');
-  }, { enableHighAccuracy:true, maximumAge:0 });
+  },e=>{console.warn(e); setStatus('Location error');},{enableHighAccuracy:true});
 }
 
-function setUser(user) {
-  selectedUser = user;
-  document.querySelectorAll('.user-btn').forEach(b=>{
-    b.classList.remove('active','brent','paris');
-  });
-  const btn = document.getElementById(`user-${user}`);
-  btn.classList.add('active', user);
-  document.documentElement.style.setProperty(
-    '--theme-color',
-    user==='paris' ? '#22c55e' : '#0ea5e9'
-  );
+// Cycle user: ?, B, P
+function cycleUser() {
+  userState = (userState+1)%3;
+  const btn = document.getElementById('user-btn');
+  btn.className = '';
+  if(userState===1) {
+    btn.textContent='B';
+    btn.classList.add('brent');
+    document.documentElement.style.setProperty('--theme-color','#0ea5e9');
+  } else if(userState===2) {
+    btn.textContent='P';
+    btn.classList.add('paris');
+    document.documentElement.style.setProperty('--theme-color','#22c55e');
+  } else {
+    btn.textContent='?';
+    document.documentElement.style.setProperty('--theme-color','#0ea5e9');
+  }
 }
 
+// One-Tap Log
 function onLog() {
-  if(!selectedUser) {
-    return setStatus('Select user');
-  }
-  if(!lastLatLng || !lastAddress) {
-    return setStatus('Waiting for GPS');
-  }
-
+  if(userState===0)            return setStatus('Select user');
+  if(!lastLL || !lastAddr)     return setStatus('Waiting for GPS');
+  const reason = document.querySelector('.chip.active').dataset.value;
   const payload = {
     timestamp: new Date().toISOString(),
-    user_email: selectedUser==='paris'
+    user_email: userState===2
       ? 'paris.wilcox@rocky.edu'
       : 'brent@tscstudios.com',
-    lat: lastLatLng.lat(),
-    lng: lastLatLng.lng(),
-    address: lastAddress.formatted,
-    city: lastAddress.city,
-    state: lastAddress.state,
-    zip: lastAddress.zip,
+    lat: lastLL.lat(),
+    lng: lastLL.lng(),
+    address: lastAddr,
+    city:'', state:'', zip:'',
     notes: document.getElementById('notes').value.trim(),
-    source_device: 'web-mvp',
+    reason,
     version: APP_CONFIG.VERSION
   };
-
   setStatus('Saving…');
   fetch(APP_CONFIG.ENDPOINT, {
-    method: 'POST',
-    mode:   'no-cors',
+    method:'POST',
+    mode:'no-cors',
     headers:{ 'Content-Type':'application/json' },
-    body:   JSON.stringify(payload)
+    body: JSON.stringify(payload)
   })
   .then(()=>{
     setStatus('✅ Saved');
-    document.getElementById('notes').value = '';
-    loadExistingPins().catch(()=>{});
+    document.getElementById('notes').value='';
+    loadPins().catch(()=>{});
   })
   .catch(e=>{
     console.error(e);
@@ -144,20 +135,20 @@ function onLog() {
   });
 }
 
-async function loadExistingPins() {
-  const res  = await fetch(APP_CONFIG.ENDPOINT);
+// GET & render pins
+async function loadPins() {
+  const res = await fetch(APP_CONFIG.ENDPOINT);
   const rows = await res.json();
   if(!map) return;
-  if(map.existingMarkers) map.existingMarkers.forEach(m=>m.setMap(null));
-  map.existingMarkers = [];
+  if(map._pins) map._pins.forEach(m=>m.setMap(null));
+  map._pins = [];
   rows.forEach(r=>{
-    const la = parseFloat(r.lat), ln = parseFloat(r.lng);
+    const la=+r.lat, ln=+r.lng;
     if(!la||!ln) return;
-    const pin = new google.maps.Marker({
-      position: { lat: la, lng: ln },
+    map._pins.push(new google.maps.Marker({
+      position:{lat:la,lng:ln},
       map,
-      icon: { url:'http://maps.google.com/mapfiles/ms/icons/red-dot.png' }
-    });
-    map.existingMarkers.push(pin);
+      icon:{url:'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
+    }));
   });
 }
