@@ -1,35 +1,95 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Door Knock Logger — v0.3.3</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Door Knock Logger – v0.3.6</title>
   <style>
-    :root { --pad: 12px; }
-    html, body { height:100%; margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-    #map { position:fixed; inset:0; }
-    .panel { position:fixed; left:var(--pad); right:var(--pad); bottom:var(--pad); display:grid; gap:8px; }
+    :root {
+      --theme-color: #0ea5e9;
+    }
+    html, body, #map {
+      height:100%; margin:0; padding:0;
+    }
+    .topbar {
+      position:absolute; top:12px; left:12px; right:12px;
+      background:rgba(255,255,255,.9);
+      backdrop-filter: blur(6px);
+      border-radius:12px; padding:8px;
+      display:flex; align-items:center; gap:8px;
+      z-index:2; font-family:system-ui,sans-serif;
+    }
+    .badge {
+      background:#f1f5f9;
+      border-radius:12px;
+      padding:4px 8px;
+      font-size:13px;
+    }
+    .user-btn {
+      width:32px; height:32px;
+      border-radius:16px; border:1px solid #ccc;
+      background:#fff; color:#444; font-weight:bold;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+    }
+    .user-btn.active.brent {
+      background:var(--theme-color);
+      border-color:var(--theme-color);
+      color:#fff;
+    }
+    .user-btn.active.paris {
+      background:#22c55e;
+      border-color:#22c55e;
+      color:#fff;
+    }
+    .panel {
+      position:absolute; bottom:12px; left:12px; right:12px;
+      display:grid; gap:8px;
+      z-index:2; font-family:system-ui,sans-serif;
+    }
+    .chips {
+      display:flex; gap:8px; flex-wrap:wrap;
+    }
+    .chip {
+      padding:8px 12px; border-radius:16px;
+      border:1px solid #e2e8f0; background:#fff;
+      cursor:pointer; user-select:none; font-size:14px;
+    }
+    .chip.active {
+      background:var(--theme-color);
+      border-color:var(--theme-color);
+      color:#fff;
+    }
+    textarea {
+      width:100%; padding:10px 12px;
+      border-radius:12px; border:1px solid #e5e7eb;
+      font-size:14px; resize:vertical;
+    }
+    .btn {
+      border:none; border-radius:14px;
+      padding:12px; font-size:16px; cursor:pointer;
+    }
+    .btn.primary {
+      background:var(--theme-color); color:#fff; font-weight:600;
+    }
+    .btn.secondary {
+      background:#f1f5f9; color:#111;
+    }
     .row { display:flex; gap:8px; align-items:center; }
-    .chips { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
-    .chip { padding:8px 12px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; user-select:none; }
-    .chip.active { background:#0ea5e9; border-color:#0ea5e9; color:#fff; }
-    textarea, input { width:100%; padding:10px 12px; border:1px solid #e5e7eb; border-radius:12px; background:rgba(255,255,255,.96); backdrop-filter:blur(6px); }
-    .btn { padding:12px 16px; border:0; border-radius:14px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.12); }
-    .btn.primary { background:#0ea5e9; color:#fff; font-weight:600; }
-    .btn.secondary { background:#f1f5f9; }
-    .badge { font-size:12px; padding:4px 8px; border-radius:999px; background:#e2e8f0; }
-    .glass { background:rgba(255,255,255,.86); border:1px solid #e5e7eb; border-radius:16px; padding:8px; }
-    .topbar { position:fixed; top:var(--pad); left:var(--pad); display:flex; gap:8px; align-items:center; z-index:1; }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-  <div class="topbar glass">
+  <div class="topbar">
     <button id="locate" class="btn secondary">📍 Use My Location</button>
     <span id="gps" class="badge">GPS: —</span>
     <span id="addr" class="badge">Address: —</span>
     <span id="status" class="badge">Ready</span>
+    <div id="user-toggle" style="margin-left:auto;display:flex;gap:8px">
+      <button id="user-brent" class="user-btn">B</button>
+      <button id="user-paris" class="user-btn">P</button>
+    </div>
   </div>
 
   <div class="panel">
@@ -48,7 +108,9 @@
     </div>
   </div>
 
-  <script src="./app.js"></script>
-  <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDdUTUDTSETq2ko_g_WsGmUqeepJosjuNw&callback=initMap"></script>
+  <script src="app.js"></script>
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDdUTUDTSETq2ko_g_WsGmUqeepJosjuNw&callback=initMap">
+  </script>
 </body>
 </html>
