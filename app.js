@@ -1,8 +1,8 @@
-// Door Knock Logger — Frontend v0.3.12
+// Door Knock Logger — Frontend v0.3.13
 
 const APP_CONFIG = {
   ENDPOINT: 'https://script.google.com/macros/s/AKfycbwTq0s0mFo3Vd70JI0fOA66h_4jB-ehE7msfsK6i4JrHbxxgxmwL9NE0l3fGa29IhZY/exec',
-  VERSION: 'v0.3.12'
+  VERSION: 'v0.3.13'
 };
 
 let map, marker, geocoder, pins = [];
@@ -16,14 +16,13 @@ window.initMap = () => {
     center: { lat:33.4484, lng:-112.0740 },
     zoom: 19,
     mapTypeId: 'hybrid',
-    tilt:0,
-    heading:0,
+    tilt: 0,
+    heading: 0,
     rotateControl:false,
     streetViewControl:false,
     fullscreenControl:false,
     mapTypeControl:false
   });
-  map.setTilt(0);
   marker = new google.maps.Marker({ map, draggable:true });
 
   map.addListener('click', e => { setMarker(e.latLng); reverseGeocode(e.latLng); });
@@ -33,16 +32,15 @@ window.initMap = () => {
     reverseGeocode(p);
   });
 
-  // UI bindings
-  document.getElementById('locate').onclick = useMyLoc;
-  document.getElementById('drop').onclick   = () => {
+  document.getElementById('locate').onclick    = useMyLoc;
+  document.getElementById('drop').onclick      = () => {
     const c = map.getCenter();
     setMarker(c);
     reverseGeocode(c);
   };
-  document.getElementById('user-select').onchange = onUserChange;
+  document.getElementById('user-btn').onclick  = cycleUser;
   document.querySelectorAll('.chip').forEach(c => c.onclick = onReasonChoosen);
-  document.getElementById('log').onclick = onLog;
+  document.getElementById('log').onclick       = onLog;
 
   useMyLoc();
   loadPins();
@@ -82,9 +80,20 @@ function useMyLoc() {
   },{ enableHighAccuracy:true });
 }
 
-function onUserChange(e) {
-  user = e.target.value;            // '' | 'brent' | 'paris'
-  setStatus(user ? 'Ready' : 'Select user');
+function cycleUser() {
+  if (user === '')        user = 'brent';
+  else if (user === 'brent')  user = 'paris';
+  else                       user = '';
+  const btn = document.getElementById('user-btn');
+  btn.className = '';
+  reason = '';
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.classList.remove('active');
+  });
+  if (user==='brent') btn.classList.add('brent'), btn.textContent='B';
+  else if (user==='paris') btn.classList.add('paris'), btn.textContent='P';
+  else btn.textContent='?';
+  setStatus(user? 'Ready':'Select user');
   updateControls();
 }
 
@@ -96,24 +105,29 @@ function onReasonChoosen(evt) {
 }
 
 function updateControls() {
-  const enabled = !!user && !!lastAddr;
-  document.querySelectorAll('.chip')
-    .forEach(c => c.style.pointerEvents = enabled ? 'auto' : 'none');
-  document.querySelectorAll('.chip')
-    .forEach(c => c.style.opacity = enabled ? 1 : 0.6);
+  const hasLocation = !!lastAddr;
+  const hasUser     = !!user;
+  document.querySelectorAll('.chip').forEach(c => {
+    c.style.pointerEvents = hasUser && hasLocation ? 'auto' : 'none';
+    c.style.opacity       = hasUser && hasLocation ? '1' : '0.6';
+  });
+
   const logBtn = document.getElementById('log');
-  logBtn.classList.toggle('enabled', enabled);
-  logBtn.disabled = !enabled;
-  document.getElementById('locate')
-    .classList.add('btn','secondary','btn','enabled');
-  document.getElementById('drop')
-    .classList.add('btn','secondary','btn','enabled');
+  const canLog = hasUser && hasLocation && !!reason;
+  logBtn.classList.toggle('enabled', canLog);
+  logBtn.textContent = canLog
+    ? '💾 One-Tap Log'
+    : ( user ? 'Select reason' : 'Select user' );
+
+  ['locate','drop'].forEach(id=>{
+    document.getElementById(id).classList.add('enabled');
+  });
 }
 
 async function onLog() {
-  if (!user) return setStatus('Select user');
+  if (!user)             return setStatus('Select user');
   if (!lastLL || !lastAddr) return setStatus('Waiting for GPS');
-  if (!reason) return setStatus('Select reason');
+  if (!reason)           return setStatus('Select reason');
 
   setStatus('Saving…');
   const payload = {
@@ -126,7 +140,7 @@ async function onLog() {
     address: lastAddr,
     notes: document.getElementById('notes').value.trim(),
     reason,
-    source_device: 'web-mvp',
+    source_device:'web-mvp',
     version: APP_CONFIG.VERSION
   };
 
@@ -155,20 +169,20 @@ async function loadPins() {
     const res = await fetch(APP_CONFIG.ENDPOINT);
     const data = await res.json();
     pins.forEach(m=>m.setMap(null));
-    pins = data.map(r => {
+    pins = data.map(r=>{
       const la = parseFloat(r.lat), ln = parseFloat(r.lng);
       if (!la||!ln) return null;
       const m = new google.maps.Marker({
         position:{lat:la,lng:ln},
-        map, icon:{url:'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
+        map,
+        icon:{url:'http://maps.google.com/mapfiles/ms/icons/red-dot.png'}
       });
       m.addListener('click',()=>{
-        const iw = new google.maps.InfoWindow({
-          content: `<strong>${r.address}</strong><br>
-                    <em>${r.status}</em><br>
-                    Notes: ${r.notes||'<none>'}`
-        });
-        iw.open(map,m);
+        new google.maps.InfoWindow({
+          content:`<strong>${r.address}</strong><br>
+                   <em>${r.status}</em><br>
+                   Notes: ${r.notes||'<none>'}`
+        }).open(map,m);
       });
       return m;
     }).filter(Boolean);
