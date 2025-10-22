@@ -1,0 +1,11 @@
+{
+  "name": "one-button-door-app",
+  "version": "0.4.0",
+  "description": "Mobile-first map app that logs door knocks to Google Sheets via Apps Script.",
+  "scripts": {
+    "smoke-test": "node ./scripts/smoke-test.js"
+  },
+  "devDependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
