@@ -1,8 +1,9 @@
 /**
  * BSRG DoorKnock System — Apps Script backend
- * Version: v0.4.0-core-hotfix (2025-10-05)
+ * Version: v0.5.0 (02_14_26)
  * Notes:
- * - Hybrid map fix on frontend; backend unchanged.
+ * - Deployed to DoorKnockLogger GCP project.
+ * - Fresh spreadsheet: "BSRG DoorKnock - Production"
  * - Maintains unified schema (Pins / Logs / Breadcrumbs / Config).
  */
 

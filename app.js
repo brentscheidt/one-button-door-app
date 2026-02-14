@@ -1,13 +1,14 @@
-/* BSRG DoorKnock — v0.4.0-core-hotfix
+/* BSRG DoorKnock — v0.5.0
  * Frontend map + fast logging
+ * Date: 02_14_26
  * Decisions: 30s polling; BLACK=DEAD; address-anchored pins; 1 pending offline log
- * Hotfix: Restored initMap() callback for Google Maps API
+ * Changes: New DoorKnockLogger GCP project; fresh Apps Script deployment
  */
 
 (() => {
   const CONFIG = {
     // Replace with your Apps Script "Web app" URL (Deployment → Manage deployments)
-    SCRIPT_BASE: "https://script.google.com/macros/s/AKfycbw-arSo0A6Xs0Uqt2vCt_n3B8p7jtPNuw4HX3tUGgc3fAeEqsDBIn5EqzFY9b4-oC/exec",
+    SCRIPT_BASE: "https://script.google.com/macros/s/AKfycbwoIvtGI0Oh-sSkFNGA_u6ARStHbhOEb01qLh6DGX0C1-lPTDg5Vz4thkaFB_n2eDcz4w/exec",
     REFRESH_SEC: 30,
     BREADCRUMB_SEC: 60,
     BREADCRUMB_MIN_DELTA_M: 50,
@@ -220,18 +221,19 @@
     };
 
     try {
-      const res = await fetch(`${CONFIG.SCRIPT_BASE}?mode=log`, {
+      // Apps Script redirects cross-origin → use no-cors (fire-and-forget)
+      await fetch(`${CONFIG.SCRIPT_BASE}?mode=log`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload),
       });
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.error || "Log failed");
-
+      // no-cors = opaque response, can't read body; trust it worked
       toast("Logged");
       d("subBtns").innerHTML = "";
       d("note").value = "";
-      await fetchPins_(true); // force refresh to show latest color/state
+      // Brief delay then refresh to show latest state
+      setTimeout(() => fetchPins_(true), 1500);
     } catch (e) {
       console.warn(e);
       // One pending offline log
@@ -248,6 +250,7 @@
     try {
       const pos = await getPosition_();
       const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      map.setCenter(latlng);
       const addr = await reverseGeocode_(latlng);
 
       // Create a temporary local pin (pin_id empty → backend will upsert & assign/keep)
@@ -284,7 +287,7 @@
   }
 
   /* ---------- Fetch pins (polling) ---------- */
-  async function fetchPins_(force=false) {
+  async function fetchPins_(force = false) {
     try {
       const res = await fetch(`${CONFIG.SCRIPT_BASE}?mode=getPins`);
       const arr = await res.json();
@@ -306,7 +309,8 @@
         try {
           await fetch(`${CONFIG.SCRIPT_BASE}?mode=log`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain" },
             body: pending,
           });
           toast("Pending log sent");
@@ -341,7 +345,8 @@
       localStorage.setItem("bsrg_last_crumb", JSON.stringify({ lat, lng }));
       await fetch(`${CONFIG.SCRIPT_BASE}?mode=breadcrumb`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           user, session_id: sessionId, lat, lng,
           speed_kmh: null, accuracy_m: pos.coords.accuracy || null
@@ -364,12 +369,12 @@
       });
     });
   }
-  function randId_(){ return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2); }
-  function fmtDate_(iso){ if(!iso) return ""; try{ const d=new Date(iso); return d.toLocaleString(); }catch{return ""} }
-  function haversineM_(lat1,lon1,lat2,lon2){
-    const R=6371000, toRad=(v)=>v*Math.PI/180;
-    const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
-    const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-    return 2*R*Math.asin(Math.sqrt(a));
+  function randId_() { return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
+  function fmtDate_(iso) { if (!iso) return ""; try { const d = new Date(iso); return d.toLocaleString(); } catch { return "" } }
+  function haversineM_(lat1, lon1, lat2, lon2) {
+    const R = 6371000, toRad = (v) => v * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
   }
 })();

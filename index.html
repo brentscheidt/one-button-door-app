@@ -1,37 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1"
-  />
-  <title>BSRG DoorKnock — v0.4.0-core-hotfix</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <title>BSRG DoorKnock — v0.5.0</title>
   <style>
-    html, body, #app { height: 100%; margin: 0; font-family: -apple-system, Inter, Arial, sans-serif; background:#0b0b0b; color:#eee; }
-    #topbar { display:flex; gap:.5rem; align-items:center; padding:.5rem; background:#111; border-bottom:1px solid #222; position:sticky; top:0; z-index:10;}
-    select, input, button { background:#1a1a1a; color:#eee; border:1px solid #333; border-radius:8px; padding:.4rem .6rem; }
-    button.primary { background:#1f6feb; border-color:#1f6feb; }
-    #map { width:100%; height: calc(100% - 58px); }
-    #panel { position:fixed; left:0; right:0; bottom:0; background:#111; border-top:1px solid #222; padding:.5rem; transform: translateY(100%); transition: transform .25s ease; }
-    #panel.open { transform: translateY(0%); }
-    #panel h3 { margin:.2rem 0; font-size:1rem; }
-    .row { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
-    .pill { padding:.25rem .5rem; border-radius: 999px; background:#222; border:1px solid #333; font-size:.85rem;}
-    .btns { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.3rem; }
-    .btn { padding:.55rem .7rem; border-radius:10px; border:1px solid #333; background:#1a1a1a; color:#eee; cursor:pointer; }
-    .btn.big { font-weight:600; }
-    .btn.red { background:#a01515; border-color:#a01515; }
-    .btn.green { background:#1e7e34; border-color:#1e7e34; }
-    .btn.blue { background:#0b5ed7; border-color:#0b5ed7; }
-    .btn.yellow { background:#8a6d1a; border-color:#8a6d1a; }
-    .btn.orange { background:#b05b00; border-color:#b05b00; }
-    .note { width:100%; padding:.45rem; border-radius:8px; border:1px solid #333; background:#0f0f0f; color:#eee; }
-    .toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#161616; color:#eee; padding:.5rem .75rem; border:1px solid #333; border-radius:10px; z-index:99; display:none;}
-    .toast.show { display:block; }
-    .badge { background:#000; color:#fff; padding:.1rem .4rem; border-radius:6px; border:1px solid #444; font-size:.75rem; }
+    html,
+    body,
+    #app {
+      height: 100%;
+      margin: 0;
+      font-family: -apple-system, Inter, Arial, sans-serif;
+      background: #0b0b0b;
+      color: #eee;
+    }
+
+    #topbar {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      padding: .5rem;
+      background: #111;
+      border-bottom: 1px solid #222;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    select,
+    input,
+    button {
+      background: #1a1a1a;
+      color: #eee;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: .4rem .6rem;
+    }
+
+    button.primary {
+      background: #1f6feb;
+      border-color: #1f6feb;
+    }
+
+    #map {
+      width: 100%;
+      height: calc(100% - 58px);
+    }
+
+    #panel {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #111;
+      border-top: 1px solid #222;
+      padding: .5rem;
+      transform: translateY(100%);
+      transition: transform .25s ease;
+    }
+
+    #panel.open {
+      transform: translateY(0%);
+    }
+
+    #panel h3 {
+      margin: .2rem 0;
+      font-size: 1rem;
+    }
+
+    .row {
+      display: flex;
+      gap: .5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      padding: .25rem .5rem;
+      border-radius: 999px;
+      background: #222;
+      border: 1px solid #333;
+      font-size: .85rem;
+    }
+
+    .btns {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-top: .3rem;
+    }
+
+    .btn {
+      padding: .55rem .7rem;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #eee;
+      cursor: pointer;
+    }
+
+    .btn.big {
+      font-weight: 600;
+    }
+
+    .btn.red {
+      background: #a01515;
+      border-color: #a01515;
+    }
+
+    .btn.green {
+      background: #1e7e34;
+      border-color: #1e7e34;
+    }
+
+    .btn.blue {
+      background: #0b5ed7;
+      border-color: #0b5ed7;
+    }
+
+    .btn.yellow {
+      background: #8a6d1a;
+      border-color: #8a6d1a;
+    }
+
+    .btn.orange {
+      background: #b05b00;
+      border-color: #b05b00;
+    }
+
+    .note {
+      width: 100%;
+      padding: .45rem;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #0f0f0f;
+      color: #eee;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #161616;
+      color: #eee;
+      padding: .5rem .75rem;
+      border: 1px solid #333;
+      border-radius: 10px;
+      z-index: 99;
+      display: none;
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    .badge {
+      background: #000;
+      color: #fff;
+      padding: .1rem .4rem;
+      border-radius: 6px;
+      border: 1px solid #444;
+      font-size: .75rem;
+    }
   </style>
 </head>
+
 <body>
   <div id="app">
     <div id="topbar">
@@ -78,6 +213,8 @@
 
   <script src="app.js"></script>
   <!-- Google Maps JS API with initMap callback -->
-  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0F-GLFjHHe9XKPAEHJdr5byv20WG_k3Q&callback=initMap&libraries=places"></script>
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzfIev2fEMKIa0bDe7FWwqb7lOrhVLstM&callback=initMap&libraries=places"></script>
 </body>
+
 </html>
