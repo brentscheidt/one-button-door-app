@@ -532,11 +532,14 @@
 
   /* ---------- Breadcrumbs (optional, off by default) ---------- */
   function toggleCrumbs_(e) {
+    const pill = e.target.closest(".pill");
     if (e.target.checked) {
       crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
-      toast("Recording route…");
+      if (pill) pill.classList.add("recording");
+      toast("🔴 Recording route…");
     } else {
       clearInterval(crumbTimer); crumbTimer = null;
+      if (pill) pill.classList.remove("recording");
       toast("Route recording off");
     }
   }

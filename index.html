@@ -315,6 +315,42 @@
       border: 1px solid rgba(255, 255, 255, .1);
       font-size: .78rem;
       cursor: pointer;
+      transition: background .2s, border-color .2s, color .2s;
+    }
+
+    .pill input[type="checkbox"] {
+      display: none;
+    }
+
+    .pill.recording {
+      background: rgba(220, 38, 38, .18);
+      border-color: rgba(220, 38, 38, .5);
+      color: #ff6b6b;
+      font-weight: 600;
+    }
+
+    .pill.recording::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      margin-right: 5px;
+      vertical-align: middle;
+      animation: rec-blink 1.2s ease-in-out infinite;
+    }
+
+    @keyframes rec-blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .3;
+      }
     }
 
     /* ---------- Buttons ---------- */
