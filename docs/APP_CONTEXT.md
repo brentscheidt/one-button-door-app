@@ -30,3 +30,21 @@
 ### Users
 - Brent, Paris, and future Platinum Roofing AZ sales reps
 - Auth: currently dropdown select → will become Google Workspace sign-in
+
+---
+
+## Credentials & Secrets
+
+> **⚠️ ALL credentials live in `~/.secure/` — NEVER in this repo.**
+
+| Credential | File | Used By |
+|-----------|------|---------|
+| MCP Desktop OAuth (Drive/Sheets) | `~/.secure/doorknocklogger_oauth.env` | Claude Desktop MCP servers |
+| MCP Desktop OAuth (JSON) | `~/.secure/doorknocklogger_mcp_desktop_oauth.json` | server-gdrive auth flow |
+| Web OAuth (Sign-In) | `~/.secure/platinum_doorknock_web_oauth.json` | Google Sign-In in index.html |
+| Maps API Key | hardcoded in index.html + app.js | Maps JS API, Geocoding |
+
+**Master reference:** `~/.secure/DOORKNOCK_SECRETS_REFERENCE.md`
+**Credentials manifest:** `~/.secure/credentials/docs/MANIFEST.txt`
+**GCP Project:** `doorknocklogger` (Google Cloud Console)
+**Owner:** `brent@tscstudios.com`

@@ -95,7 +95,7 @@
 
 ## MCP Server Configuration (02_14_26)
 
-### Installed Packages (global npm)
+### Installed Packages (via npx on demand)
 - `@modelcontextprotocol/server-gdrive` — Google Drive file search/access
 - `@gpwork4u/google-sheets-mcp` — Google Sheets read/write
 - `@modelcontextprotocol/server-google-maps` — Geocoding & places
@@ -105,11 +105,17 @@
 
 | Server | Command | Auth |
 |--------|---------|------|
-| `google-drive` | `npx -y @modelcontextprotocol/server-gdrive` | OAuth (Client ID + Secret) |
-| `google-sheets` | `npx -y @gpwork4u/google-sheets-mcp` | OAuth (Client ID + Secret) |
-| `google-maps` | `npx -y @modelcontextprotocol/server-google-maps` | Maps API Key |
+| `google-drive` | `/opt/homebrew/bin/npx -y @modelcontextprotocol/server-gdrive` | OAuth (Client ID + Secret) |
+| `google-sheets` | `/opt/homebrew/bin/npx -y @gpwork4u/google-sheets-mcp` | OAuth (Client ID + Secret) |
+| `google-maps` | `/opt/homebrew/bin/npx -y @modelcontextprotocol/server-google-maps` | Maps API Key |
 
-> **Note:** After updating config, Claude Desktop must be restarted. First launch of google-drive and google-sheets will prompt browser OAuth flow — sign in with `brent@tscstudios.com`.
+> **Note:** Commands use absolute `/opt/homebrew/bin/npx` path (Node v23.7.0) with explicit `PATH` env to ensure `node` is found by child processes. After updating config, Claude Desktop must be restarted. First launch of google-drive and google-sheets will prompt browser OAuth flow — sign in with `brent@tscstudios.com`.
+
+### OAuth Scopes (Data Access — 02_14_26)
+| Category | Scope | Description |
+|----------|-------|-------------|
+| Sensitive | `.../auth/spreadsheets` | See, edit, create, delete all Google Sheets |
+| Restricted | `.../auth/drive.readonly` | See and download all Google Drive files |
 
 ---
 
@@ -134,6 +140,8 @@
 12. Stored credentials securely in `~/.secure/doorknocklogger_oauth.env`
 13. Installed MCP server packages globally (gdrive, sheets, maps)
 14. Updated `claude_desktop_config.json` with 3 MCP server entries
+15. Fixed `claude_desktop_config.json` to use absolute `/opt/homebrew/bin/npx` + PATH env
+16. Added OAuth scopes: `spreadsheets` (sensitive) + `drive.readonly` (restricted)
 
 ---
 
@@ -142,9 +150,11 @@
 - [x] Create OAuth 2.0 Desktop Client ID credentials
 - [x] Install & configure MCP server packages (Sheets, Drive, Maps)
 - [x] Update `claude_desktop_config.json` with MCP server entries
+- [x] Fix `claude_desktop_config.json` — absolute npx path + PATH env (02_14_26)
+- [x] Add OAuth scopes: spreadsheets + drive.readonly (02_14_26)
 - [x] Verify Maps API key belongs to DoorKnockLogger project (swapped to correct key)
 - [x] Update deployed Apps Script code to match local v0.5.0 (Version 2 deployed)
 - [x] Test the full app flow end-to-end (GET verified, frontend loads with map)
+- [x] Migrate existing pins from Paris' account (24 pins via migrate_pins.js)
 - [ ] Complete OAuth browser flow in Claude Desktop (requires Brent restart)
 - [ ] Verify MCP servers in Claude Desktop (Sheets read, Drive search, Maps geocode)
-- [ ] Migrate existing pins from Paris' account
