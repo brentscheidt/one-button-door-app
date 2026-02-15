@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.8.0 — 02_15_26
+**Save button + Session timer + Route tuning**
+- ✅ **Save button** — prominent 💾 SAVE button in pin panel. No more lost data from forgetting sub-options.
+- ✅ **Status tracking** — selected status/substatus highlighted with white outline, save button shows what will be saved.
+- ✅ **Session timer** — replaces old Route toggle. Start/pause/stop, blinking 🔴 LIVE indicator, elapsed timer, knock counter.
+- ✅ **Bigger Drop Pin FAB** — increased from 80px to 90px for better mobile tap target.
+- ✅ **Breadcrumb tuning** — interval reduced from 60s to 15s, min distance from 50m to 15m for driving resolution.
+- ✅ **Route max gap** — 300m config added; when rendering routes, won't connect dots that are too far apart.
+- ✅ **Backend endpoints** (local only, not yet deployed) — getBreadcrumbs, getRouteSessions for route retrieval.
+- ✅ **Ideas backlog** — `docs/IDEAS_BACKLOG_02_15_26_v1.md` tracks all feature ideas and iterations.
+
+**Known Issues**
+- Backend Code.gs needs manual deployment to Apps Script for route retrieval endpoints.
+- Route display on map not yet built (blocked by backend deployment).
+- Dragon logo + dropdown menu not yet implemented.
+
+## v0.7.0 — 02_15_26
+**Google Sign-In + auth improvements**
+- ✅ **Google Sign-In** — replaced manual user dropdown with Google OAuth sign-in.
+- ✅ **Profile display** — user's avatar and name shown in topbar.
+- ✅ **Bigger FAB + log buttons** — improved touch targets for mobile use.
+- ✅ **Auth menu** — click avatar to see email, sign out option.
+
 ## v0.6.0 — 02_14_26
 **Platinum rebrand + online deployment**
 - ✅ **Rebranded** from BSRG to **Platinum DoorKnock** across all files.
