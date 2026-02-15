@@ -1,14 +1,14 @@
-/* Platinum DoorKnock — v0.6.0
+/* Platinum DoorKnock — v0.7.0
  * Frontend map + fast logging
  * Date: 02_14_26
  * Decisions: 30s polling; BLACK=DEAD; address-anchored pins; 1 pending offline log
- * Changes: Rebrand to Platinum; GitHub Pages deployment; full feature set
+ * Changes: Google Sign-In auth; profile avatar; bigger FAB + log buttons
  */
 
 (() => {
   const CONFIG = {
-    // Replace with your Apps Script "Web app" URL (Deployment → Manage deployments)
     SCRIPT_BASE: "https://script.google.com/macros/s/AKfycbwoIvtGI0Oh-sSkFNGA_u6ARStHbhOEb01qLh6DGX0C1-lPTDg5Vz4thkaFB_n2eDcz4w/exec",
+    GOOGLE_CLIENT_ID: "251697766355-o504ecjmj2laaa3gs599ejp4asjbe2es.apps.googleusercontent.com",
     REFRESH_SEC: 30,
     BREADCRUMB_SEC: 60,
     BREADCRUMB_MIN_DELTA_M: 50,
@@ -17,13 +17,17 @@
 
   // State
   let map, geocoder, meMarker;
-  let markers = new Map();       // pin_id -> google.maps.Marker
-  let pinsIndex = new Map();     // pin_id -> pin data
+  let markers = new Map();
+  let pinsIndex = new Map();
   let selectedPin = null;
   let lastFetchHash = "";
   let sessionId = randId_();
   let crumbTimer = null;
   let currentFilter = localStorage.getItem("plat_filter") || "all";
+
+  // Auth state
+  let authUser = JSON.parse(localStorage.getItem("plat_auth") || "null");
+  // { name, email, picture, given_name }
 
   // DOM
   const d = (id) => document.getElementById(id);
@@ -36,6 +40,7 @@
 
   /* ---------- Init ---------- */
   window.initMap = init;
+  window.handleGoogleSignIn = handleGoogleSignIn_;
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else init();
@@ -57,14 +62,22 @@
     d("dropBtn").addEventListener("click", dropPinAtGps_);
     d("crumbToggle").addEventListener("change", toggleCrumbs_);
     d("closePanel").addEventListener("click", closePanel_);
-    d("userSelect").addEventListener("change", () => {
-      localStorage.setItem("plat_user", d("userSelect").value || "");
-      applyViewFilter_(); // re-filter when user changes
-    });
     d("viewSelect").addEventListener("change", () => {
       currentFilter = d("viewSelect").value;
       localStorage.setItem("plat_filter", currentFilter);
       applyViewFilter_();
+    });
+
+    // Auth UI
+    d("signInBtn").addEventListener("click", promptGoogleSignIn_);
+    d("signOutBtn").addEventListener("click", signOut_);
+    d("authArea").addEventListener("click", (e) => {
+      if (authUser && !e.target.closest("#authMenu")) {
+        d("authMenu").classList.toggle("show");
+      }
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#authArea")) d("authMenu").classList.remove("show");
     });
 
     // Tap map to close panel
@@ -83,14 +96,103 @@
       }
     });
 
-    // Restore user + filter
-    const savedUser = localStorage.getItem("plat_user") || "";
-    if (savedUser) d("userSelect").value = savedUser;
+    // Restore filter + auth
     d("viewSelect").value = currentFilter;
+    renderAuthUI_();
+    initGoogleSignIn_();
 
-    locateMe_();       // center on load (manual re-center thereafter)
+    locateMe_();
     await fetchPins_();
     setInterval(fetchPins_, CONFIG.REFRESH_SEC * 1000);
+  }
+
+  /* ---------- Google Sign-In ---------- */
+  function initGoogleSignIn_() {
+    if (typeof google === "undefined" || !google.accounts) {
+      setTimeout(initGoogleSignIn_, 500);
+      return;
+    }
+    google.accounts.id.initialize({
+      client_id: CONFIG.GOOGLE_CLIENT_ID,
+      callback: handleGoogleSignIn_,
+      auto_select: true,
+      itp_support: true,
+    });
+    // If not signed in, show One Tap
+    if (!authUser) {
+      google.accounts.id.prompt();
+    }
+  }
+
+  function promptGoogleSignIn_() {
+    if (typeof google !== "undefined" && google.accounts) {
+      google.accounts.id.prompt((n) => {
+        if (n.isNotDisplayed() || n.isSkippedMoment()) {
+          // Fallback: render a button
+          const cont = document.createElement("div");
+          cont.id = "gsi-fallback";
+          cont.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:#1a1a1e;padding:1.5rem;border-radius:12px;border:1px solid rgba(255,255,255,.1);";
+          document.body.appendChild(cont);
+          google.accounts.id.renderButton(cont, { theme: "filled_black", size: "large", shape: "pill" });
+          setTimeout(() => { if (cont.parentNode) cont.remove(); }, 15000);
+        }
+      });
+    }
+  }
+
+  function handleGoogleSignIn_(response) {
+    const payload = decodeJwt_(response.credential);
+    if (!payload) { toast("Sign-in failed"); return; }
+    authUser = {
+      name: payload.name || payload.email,
+      given_name: payload.given_name || payload.name || "",
+      email: payload.email,
+      picture: payload.picture || "",
+    };
+    localStorage.setItem("plat_auth", JSON.stringify(authUser));
+    renderAuthUI_();
+    toast(`Welcome, ${authUser.given_name}!`);
+    // Remove fallback popup if present
+    const fb = document.getElementById("gsi-fallback");
+    if (fb) fb.remove();
+  }
+
+  function signOut_() {
+    authUser = null;
+    localStorage.removeItem("plat_auth");
+    d("authMenu").classList.remove("show");
+    if (typeof google !== "undefined" && google.accounts) {
+      google.accounts.id.disableAutoSelect();
+    }
+    renderAuthUI_();
+    toast("Signed out");
+  }
+
+  function renderAuthUI_() {
+    if (authUser) {
+      d("signInBtn").style.display = "none";
+      d("avatarImg").style.display = "block";
+      d("avatarImg").src = authUser.picture;
+      d("userName").style.display = "block";
+      d("userName").textContent = authUser.given_name || authUser.name;
+      d("menuEmail").textContent = authUser.email;
+    } else {
+      d("signInBtn").style.display = "";
+      d("avatarImg").style.display = "none";
+      d("userName").style.display = "none";
+    }
+  }
+
+  function getUser_() {
+    return authUser ? (authUser.given_name || authUser.name || authUser.email) : "";
+  }
+
+  function decodeJwt_(token) {
+    try {
+      const parts = token.split(".");
+      const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      return JSON.parse(atob(payload));
+    } catch (e) { console.warn("JWT decode failed", e); return null; }
   }
 
   /* ---------- Map helpers ---------- */
@@ -245,8 +347,8 @@
   }
 
   async function submitLog_(status, substatus) {
-    const user = d("userSelect").value || "";
-    if (!user) { toast("Select User"); return; }
+    const user = getUser_();
+    if (!user) { toast("Sign in first"); return; }
     if (!selectedPin) { toast("Select or drop a pin first"); return; }
 
     // Prevent double taps for 3s
@@ -293,8 +395,8 @@
 
   /* ---------- Drop pin ---------- */
   async function dropPinAtGps_() {
-    const user = d("userSelect").value || "";
-    if (!user) { toast("Select User"); return; }
+    const user = getUser_();
+    if (!user) { toast("Sign in first"); return; }
 
     try {
       const pos = await getPosition_();
@@ -388,7 +490,7 @@
 
   /* ---------- View filter ---------- */
   function applyViewFilter_() {
-    const user = d("userSelect").value || "";
+    const user = getUser_();
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const weekStart = todayStart - 6 * 86400000; // 7-day window
@@ -441,7 +543,7 @@
 
   async function sendCrumb_() {
     try {
-      const user = d("userSelect").value || "";
+      const user = getUser_();
       if (!user) return;
       const pos = await getPosition_();
       const lat = pos.coords.latitude, lng = pos.coords.longitude;
