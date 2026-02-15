@@ -80,8 +80,27 @@
       if (!e.target.closest("#authArea")) d("authMenu").classList.remove("show");
     });
 
-    // Tap map to close panel
+    // Map interactions: tap to close panel, long-press to drop pin
+    let longPressTimer = null;
+    let longPressStart = null;
     map.addListener("click", closePanel_);
+    map.addListener("mousedown", (e) => {
+      longPressStart = { x: e.domEvent.clientX, y: e.domEvent.clientY };
+      longPressTimer = setTimeout(() => {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        dropPinAtLocation_(lat, lng);
+        longPressTimer = null;
+      }, 600);
+    });
+    map.addListener("mouseup", () => { clearTimeout(longPressTimer); longPressTimer = null; });
+    map.addListener("mousemove", (e) => {
+      if (longPressTimer && longPressStart) {
+        const dx = e.domEvent.clientX - longPressStart.x;
+        const dy = e.domEvent.clientY - longPressStart.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 10) { clearTimeout(longPressTimer); longPressTimer = null; }
+      }
+    });
 
     // Fast log buttons → show suboptions
     Array.from(d("topBtns").querySelectorAll("[data-top]")).forEach(btn => {
@@ -435,6 +454,37 @@
     }
     return "";
     // Backend will also upsert by address if pin_id empty.
+  }
+
+  /* ---------- Drop pin at arbitrary location (long-press) ---------- */
+  async function dropPinAtLocation_(lat, lng) {
+    const user = getUser_();
+    if (!user) { toast("Sign in first"); return; }
+
+    try {
+      const latlng = { lat, lng };
+      const addr = await reverseGeocode_(latlng);
+
+      const temp = {
+        pin_id: findExistingByAddress_(addr) || "",
+        address: addr,
+        lat,
+        lng,
+        status: "Damage",
+        substatus: "Marked for Knock",
+        user,
+        is_dnd: false,
+        ts: new Date().toISOString(),
+      };
+      pinsIndex.set(temp.pin_id || addr, temp);
+      selectedPin = temp;
+      addOrUpdateMarker_({ ...temp, pin_id: temp.pin_id || addr });
+      openPanel_(temp.pin_id || addr);
+      toast("📌 Pin placed");
+    } catch (e) {
+      console.warn(e);
+      toast("Could not drop pin");
+    }
   }
 
   /* ---------- Fetch pins (polling) ---------- */
