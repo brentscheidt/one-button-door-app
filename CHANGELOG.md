@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.6.0 — 02_14_26
+**Platinum rebrand + online deployment**
+- ✅ **Rebranded** from BSRG to **Platinum DoorKnock** across all files.
+- ✅ **GitHub Pages deployment** — app now accessible at `https://brentscheidt.github.io/one-button-door-app/`.
+- ✅ Updated localStorage keys from `bsrg_` to `plat_` prefix.
+- ✅ Updated README with feature list, architecture diagram, live URL.
+- ✅ All backend endpoints verified working (getPins, getLogs, log, breadcrumb, version).
+
 ## v0.5.2 — 02_14_26
 **Pin history + UI overhaul**
 - ✅ **Pin history view** — tap any pin to see all past log entries (fetched from `getLogs` endpoint).

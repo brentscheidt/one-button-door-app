@@ -1,9 +1,9 @@
 /**
- * BSRG DoorKnock System — Apps Script backend
- * Version: v0.5.0 (02_14_26)
+ * Platinum DoorKnock System — Apps Script backend
+ * Version: v0.6.0 (02_14_26)
  * Notes:
  * - Deployed to DoorKnockLogger GCP project.
- * - Fresh spreadsheet: "BSRG DoorKnock - Production"
+ * - Fresh spreadsheet: "Platinum DoorKnock - Production"
  * - Maintains unified schema (Pins / Logs / Breadcrumbs / Config).
  */
 

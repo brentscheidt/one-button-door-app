@@ -1,4 +1,4 @@
-# BSRG DoorKnock — App Context & Pain Point
+# Platinum DoorKnock — App Context & Pain Point
 
 ## What This App Solves
 

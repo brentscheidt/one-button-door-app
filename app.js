@@ -1,8 +1,8 @@
-/* BSRG DoorKnock — v0.5.2
+/* Platinum DoorKnock — v0.6.0
  * Frontend map + fast logging
  * Date: 02_14_26
  * Decisions: 30s polling; BLACK=DEAD; address-anchored pins; 1 pending offline log
- * Changes: Pin history, pin count, stale marker cleanup, UI overhaul
+ * Changes: Rebrand to Platinum; GitHub Pages deployment; full feature set
  */
 
 (() => {
@@ -23,7 +23,7 @@
   let lastFetchHash = "";
   let sessionId = randId_();
   let crumbTimer = null;
-  let currentFilter = localStorage.getItem("bsrg_filter") || "all";
+  let currentFilter = localStorage.getItem("plat_filter") || "all";
 
   // DOM
   const d = (id) => document.getElementById(id);
@@ -58,12 +58,12 @@
     d("crumbToggle").addEventListener("change", toggleCrumbs_);
     d("closePanel").addEventListener("click", closePanel_);
     d("userSelect").addEventListener("change", () => {
-      localStorage.setItem("bsrg_user", d("userSelect").value || "");
+      localStorage.setItem("plat_user", d("userSelect").value || "");
       applyViewFilter_(); // re-filter when user changes
     });
     d("viewSelect").addEventListener("change", () => {
       currentFilter = d("viewSelect").value;
-      localStorage.setItem("bsrg_filter", currentFilter);
+      localStorage.setItem("plat_filter", currentFilter);
       applyViewFilter_();
     });
 
@@ -84,7 +84,7 @@
     });
 
     // Restore user + filter
-    const savedUser = localStorage.getItem("bsrg_user") || "";
+    const savedUser = localStorage.getItem("plat_user") || "";
     if (savedUser) d("userSelect").value = savedUser;
     d("viewSelect").value = currentFilter;
 
@@ -286,7 +286,7 @@
     } catch (e) {
       console.warn(e);
       // One pending offline log
-      localStorage.setItem("bsrg_pending_log", JSON.stringify(payload));
+      localStorage.setItem("plat_pending_log", JSON.stringify(payload));
       toast("Offline. Will retry…");
     }
   }
@@ -367,9 +367,9 @@
       updatePinCount_();
 
       // Retry pending log if exists
-      const pending = localStorage.getItem("bsrg_pending_log");
+      const pending = localStorage.getItem("plat_pending_log");
       if (pending) {
-        localStorage.removeItem("bsrg_pending_log");
+        localStorage.removeItem("plat_pending_log");
         try {
           await fetch(`${CONFIG.SCRIPT_BASE}?mode=log`, {
             method: "POST",
@@ -445,10 +445,10 @@
       if (!user) return;
       const pos = await getPosition_();
       const lat = pos.coords.latitude, lng = pos.coords.longitude;
-      const last = JSON.parse(localStorage.getItem("bsrg_last_crumb") || "null");
+      const last = JSON.parse(localStorage.getItem("plat_last_crumb") || "null");
       if (last && haversineM_(last.lat, last.lng, lat, lng) < CONFIG.BREADCRUMB_MIN_DELTA_M) return;
 
-      localStorage.setItem("bsrg_last_crumb", JSON.stringify({ lat, lng }));
+      localStorage.setItem("plat_last_crumb", JSON.stringify({ lat, lng }));
       await fetch(`${CONFIG.SCRIPT_BASE}?mode=breadcrumb`, {
         method: "POST",
         mode: "no-cors",
