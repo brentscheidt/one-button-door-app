@@ -1,10 +1,9 @@
 /**
- * Platinum DoorKnock System — Apps Script backend
- * Version: v0.6.0 (02_14_26)
- * Notes:
- * - Deployed to DoorKnockLogger GCP project.
- * - Fresh spreadsheet: "Platinum DoorKnock - Production"
- * - Maintains unified schema (Pins / Logs / Breadcrumbs / Config).
+ * Platinum DoorKnock — Apps Script backend + frontend host
+ * Version: v0.7.0 (02_14_26)
+ * Deployment: HtmlService — single URL, Google auth built-in
+ * Sheet: "Platinum DoorKnock - Production"
+ * Tabs: Pins / Logs / Breadcrumbs / Config
  */
 
 const SHEET = {
@@ -14,19 +13,88 @@ const SHEET = {
   CONFIG: "Config",
 };
 
+/* ===================== Web Handlers ===================== */
+
 function doGet(e) {
   try {
-    const mode = (e.parameter.mode || "").toLowerCase();
+    const mode = ((e && e.parameter && e.parameter.mode) || "").toLowerCase();
+    // API endpoints (backward compat + smoke tests)
     if (mode === "getpins") return json_(getPins_());
     if (mode === "getlogs") return json_(getLogs_(e.parameter.pin_id || "", e.parameter.address || ""));
-    if (mode === "version") return json_({ version: getConfig_("version") || "0.0.0" });
-    return json_({ ok: true, now: new Date().toISOString() });
+    if (mode === "version") return json_({ version: getConfig_("version") || "0.7.0" });
+    // Default: serve the web app
+    return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('Platinum DoorKnock')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (err) {
     return error_(err);
   }
 }
 
-/* ------------ Get Logs for a Pin ------------- */
+function doPost(e) {
+  try {
+    const mode = ((e && e.parameter && e.parameter.mode) || "").toLowerCase();
+    const body = e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
+    if (mode === "log") return json_(handleLog_(body));
+    if (mode === "breadcrumb") return json_(handleBreadcrumb_(body));
+    return json_({ ok: false, error: "Unknown POST mode" });
+  } catch (err) {
+    return error_(err);
+  }
+}
+
+/* ========= Client-callable (google.script.run) ========= */
+
+function getActiveUserEmail() {
+  return Session.getActiveUser().getEmail();
+}
+
+function getPinsClient() {
+  return getPins_();
+}
+
+function submitLogClient(payload) {
+  return handleLog_(payload);
+}
+
+function getLogsClient(pinId, address) {
+  return getLogs_(pinId, address);
+}
+
+function submitBreadcrumbClient(payload) {
+  return handleBreadcrumb_(payload);
+}
+
+/* ============ Get Pins ============ */
+function getPins_() {
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(SHEET.PINS);
+  if (!sh) return [];
+  const values = getRows_(sh);
+  if (values.length === 0) return [];
+  const headers = values[0];
+  const rows = values.slice(1);
+  const idx = colIndex_(headers, [
+    "pin_id","address_norm","lat","lng",
+    "latest_status","latest_substatus","latest_note",
+    "latest_ts","latest_user","is_dnd"
+  ]);
+  const out = rows.map(r => ({
+    pin_id: r[idx.pin_id] || "",
+    address: r[idx.address_norm] || "",
+    lat: num_(r[idx.lat]),
+    lng: num_(r[idx.lng]),
+    status: r[idx.latest_status] || "",
+    substatus: r[idx.latest_substatus] || "",
+    note: r[idx.latest_note] || "",
+    ts: r[idx.latest_ts] ? String(r[idx.latest_ts]) : "",
+    user: r[idx.latest_user] || "",
+    is_dnd: toBool_(r[idx.is_dnd]),
+  })).filter(p => p.address);
+  return out;
+}
+
+/* ============ Get Logs for a Pin ============ */
 function getLogs_(pinId, address) {
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(SHEET.LOGS);
@@ -52,55 +120,13 @@ function getLogs_(pinId, address) {
     substatus: r[idx.substatus] || "",
     note: r[idx.note] || "",
     user: r[idx.user] || "",
-    ts: r[idx.ts] || "",
+    ts: r[idx.ts] ? String(r[idx.ts]) : "",
   }));
-  // Sort newest first
   out.sort((a, b) => (b.ts || "").localeCompare(a.ts || ""));
   return out;
 }
 
-function doPost(e) {
-  try {
-    const mode = ((e.parameter && e.parameter.mode) || "").toLowerCase();
-    const body = e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
-    if (mode === "log") return json_(handleLog_(body));
-    if (mode === "breadcrumb") return json_(handleBreadcrumb_(body));
-    return json_({ ok: false, error: "Unknown POST mode" });
-  } catch (err) {
-    return error_(err);
-  }
-}
-
-/* ------------ Get Pins ------------- */
-function getPins_() {
-  const ss = SpreadsheetApp.getActive();
-  const sh = ss.getSheetByName(SHEET.PINS);
-  if (!sh) return [];
-  const values = getRows_(sh);
-  if (values.length === 0) return [];
-  const headers = values[0];
-  const rows = values.slice(1);
-  const idx = colIndex_(headers, [
-    "pin_id","address_norm","lat","lng",
-    "latest_status","latest_substatus","latest_note",
-    "latest_ts","latest_user","is_dnd"
-  ]);
-  const out = rows.map(r => ({
-    pin_id: r[idx.pin_id] || "",
-    address: r[idx.address_norm] || "",
-    lat: num_(r[idx.lat]),
-    lng: num_(r[idx.lng]),
-    status: r[idx.latest_status] || "",
-    substatus: r[idx.latest_substatus] || "",
-    note: r[idx.latest_note] || "",
-    ts: r[idx.latest_ts] || "",
-    user: r[idx.latest_user] || "",
-    is_dnd: toBool_(r[idx.is_dnd]),
-  })).filter(p => p.address);
-  return out;
-}
-
-/* ------------ Handle Log ------------- */
+/* ============ Handle Log ============ */
 function handleLog_(payload) {
   const now = new Date();
   const ts = now.toISOString();
@@ -122,7 +148,7 @@ function handleLog_(payload) {
   return { ok: true, pin_id: pin.pin_id, ts };
 }
 
-/* ------------ Handle Breadcrumb ------------- */
+/* ============ Handle Breadcrumb ============ */
 function handleBreadcrumb_(payload) {
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(SHEET.BREADCRUMBS);
@@ -140,7 +166,7 @@ function handleBreadcrumb_(payload) {
   return { ok: true };
 }
 
-/* ------------ Pin + Log Utilities ------------- */
+/* ============ Pin + Log Utilities ============ */
 function upsertPin_(clean) {
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(SHEET.PINS);
@@ -198,7 +224,7 @@ function appendLogRow_(pin_id, addr, clean) {
   ]);
 }
 
-/* ------------ Misc Utilities ------------- */
+/* ============ Misc Utilities ============ */
 function getConfig_(key) {
   const ss = SpreadsheetApp.getActive();
   const sh = ss.getSheetByName(SHEET.CONFIG);

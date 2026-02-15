@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <base target="_top">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body,
+    #app {
+      height: 100%;
+      margin: 0;
+      font-family: 'Inter', -apple-system, Arial, sans-serif;
+      background: #0a0a0b;
+      color: #e8e8e8;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ---------- Topbar ---------- */
+    #topbar {
+      display: flex;
+      gap: .35rem;
+      align-items: center;
+      padding: .4rem .5rem;
+      background: linear-gradient(180deg, #161618 0%, #111113 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+
+    #topbar .row-1 {
+      display: flex;
+      gap: .35rem;
+      align-items: center;
+      width: 100%;
+    }
+
+    #topbar .row-2 {
+      display: flex;
+      gap: .35rem;
+      align-items: center;
+      width: 100%;
+    }
+
+    select,
+    input,
+    button {
+      font-family: inherit;
+      font-size: .82rem;
+      background: rgba(255, 255, 255, .06);
+      color: #e8e8e8;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      padding: .4rem .55rem;
+      outline: none;
+      transition: border-color .15s, background .15s;
+    }
+
+    select:focus,
+    button:focus {
+      border-color: rgba(31, 111, 235, .5);
+    }
+
+    button:active {
+      transform: scale(.97);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #1f6feb 0%, #1a5bc7 100%);
+      border-color: rgba(31, 111, 235, .4);
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .user-badge {
+      font-size: .78rem;
+      color: #1f6feb;
+      font-weight: 600;
+      padding: .3rem .5rem;
+      background: rgba(31, 111, 235, .1);
+      border: 1px solid rgba(31, 111, 235, .2);
+      border-radius: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
+    }
+
+    .pin-count {
+      font-size: .72rem;
+      color: #888;
+      padding: 0 .3rem;
+      white-space: nowrap;
+    }
+
+    /* ---------- Map ---------- */
+    #map {
+      width: 100%;
+      height: calc(100% - 80px);
+    }
+
+    /* ---------- Panel ---------- */
+    #panel {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, #151517 0%, #0e0e10 100%);
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      padding: .6rem .6rem .8rem;
+      transform: translateY(100%);
+      transition: transform .25s cubic-bezier(.4, 0, .2, 1);
+      z-index: 20;
+      max-height: 70vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #panel.open {
+      transform: translateY(0%);
+    }
+
+    #panel h3 {
+      margin: .15rem 0;
+      font-size: .95rem;
+      font-weight: 600;
+      padding-right: 2rem;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: .35rem;
+      right: .5rem;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      color: #999;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: .15rem .45rem;
+      line-height: 1;
+      z-index: 5;
+    }
+
+    .close-btn:active {
+      color: #fff;
+      background: rgba(255, 255, 255, .12);
+    }
+
+    .row {
+      display: flex;
+      gap: .4rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .meta {
+      font-size: .78rem;
+      color: #888;
+      margin-bottom: .35rem;
+    }
+
+    .pill {
+      padding: .25rem .45rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .1);
+      font-size: .78rem;
+      cursor: pointer;
+    }
+
+    /* ---------- Buttons ---------- */
+    .btns {
+      display: flex;
+      gap: .35rem;
+      flex-wrap: wrap;
+      margin-top: .3rem;
+    }
+
+    .btn {
+      padding: .5rem .65rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .06);
+      color: #e8e8e8;
+      cursor: pointer;
+      font-size: .82rem;
+      font-weight: 500;
+      transition: transform .1s, opacity .1s;
+    }
+
+    .btn:active {
+      transform: scale(.95);
+      opacity: .85;
+    }
+
+    .btn.big {
+      font-weight: 600;
+    }
+
+    .btn.red {
+      background: linear-gradient(135deg, #a01515 0%, #7a1010 100%);
+      border-color: rgba(160, 21, 21, .5);
+    }
+
+    .btn.green {
+      background: linear-gradient(135deg, #1e7e34 0%, #165f27 100%);
+      border-color: rgba(30, 126, 52, .5);
+    }
+
+    .btn.blue {
+      background: linear-gradient(135deg, #0b5ed7 0%, #0948a8 100%);
+      border-color: rgba(11, 94, 215, .5);
+    }
+
+    .btn.yellow {
+      background: linear-gradient(135deg, #8a6d1a 0%, #6b5514 100%);
+      border-color: rgba(138, 109, 26, .5);
+    }
+
+    .btn.orange {
+      background: linear-gradient(135deg, #b05b00 0%, #8a4700 100%);
+      border-color: rgba(176, 91, 0, .5);
+    }
+
+    /* ---------- Note textarea ---------- */
+    .note {
+      width: 100%;
+      padding: .4rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      background: rgba(255, 255, 255, .04);
+      color: #e8e8e8;
+      font-family: inherit;
+      font-size: .82rem;
+      resize: none;
+    }
+
+    .note:focus {
+      border-color: rgba(31, 111, 235, .4);
+      outline: none;
+    }
+
+    /* ---------- History ---------- */
+    #historySection {
+      margin-top: .5rem;
+      border-top: 1px solid rgba(255, 255, 255, .06);
+      padding-top: .4rem;
+    }
+
+    #historySection h4 {
+      margin: 0 0 .3rem;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    .history-item {
+      padding: .35rem .4rem;
+      margin-bottom: .25rem;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid rgba(255, 255, 255, .05);
+      font-size: .78rem;
+      color: #bbb;
+    }
+
+    .history-item .hi-status {
+      font-weight: 600;
+      color: #e8e8e8;
+    }
+
+    .history-item .hi-time {
+      color: #666;
+      font-size: .72rem;
+    }
+
+    .history-empty {
+      font-size: .78rem;
+      color: #555;
+      font-style: italic;
+    }
+
+    /* ---------- Toast ---------- */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: rgba(22, 22, 22, .95);
+      color: #e8e8e8;
+      padding: .45rem .7rem;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 10px;
+      z-index: 99;
+      font-size: .82rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
+    .badge {
+      background: #000;
+      color: #ff5555;
+      padding: .1rem .4rem;
+      border-radius: 6px;
+      border: 1px solid #444;
+      font-size: .72rem;
+      font-weight: 600;
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 420px) {
+      #topbar {
+        padding: .3rem .35rem;
+      }
+
+      select,
+      button {
+        font-size: .75rem;
+        padding: .35rem .4rem;
+      }
+
+      .btn {
+        font-size: .75rem;
+        padding: .4rem .5rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="topbar">
+      <div class="row-1">
+        <span id="userBadge" class="user-badge">Loading...</span>
+        <select id="viewSelect" title="Filter view">
+          <option value="all">All Pins</option>
+          <option value="mine">My Pins</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+        </select>
+        <span id="pinCount" class="pin-count"></span>
+        <button id="refreshBtn" title="Refresh">&#8635;</button>
+        <button id="locateBtn" title="Center on me">&#9678;</button>
+      </div>
+      <div class="row-2">
+        <button id="dropBtn" class="primary">&#128205; Drop Pin @ GPS</button>
+        <label class="pill"><input type="checkbox" id="crumbToggle" /> Route</label>
+      </div>
+    </div>
+    <div id="map"></div>
+
+    <div id="panel">
+      <button id="closePanel" class="close-btn" title="Close">&#10005;</button>
+      <div class="row">
+        <h3 id="p_addr">Address</h3>
+        <span id="p_badge" class="badge" style="display:none;">DND</span>
+      </div>
+      <div class="meta" id="p_meta"></div>
+
+      <div class="btns" id="topBtns">
+        <button class="btn big yellow" data-top="Damage">Damage</button>
+        <button class="btn big yellow" data-top="Quick Knock">Quick Knock</button>
+        <button class="btn big blue" data-top="Conversation">Conversation</button>
+        <button class="btn big orange" data-top="Inspection">Inspection</button>
+        <button class="btn big green" data-top="Customer">Customer</button>
+        <button class="btn big red" data-top="Dead">DEAD</button>
+      </div>
+
+      <div class="btns" id="subBtns"></div>
+      <textarea id="note" class="note" rows="2" placeholder="Optional short note (50 chars max)"></textarea>
+
+      <div id="historySection" style="display:none;">
+        <h4>History</h4>
+        <div id="historyList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+  /* Platinum DoorKnock — v0.7.0 (Apps Script Hosted)
+   * All fetch() calls replaced with google.script.run
+   * User identity from Google session — no dropdown, no spoofing
+   */
+  (() => {
+    const CONFIG = {
+      REFRESH_SEC: 30,
+      BREADCRUMB_SEC: 60,
+      BREADCRUMB_MIN_DELTA_M: 50,
+      MAX_NOTE_LEN: 50,
+    };
+
+    // State
+    let map, geocoder, meMarker;
+    let markers = new Map();
+    let pinsIndex = new Map();
+    let selectedPin = null;
+    let lastFetchHash = "";
+    let sessionId = randId_();
+    let crumbTimer = null;
+    let currentUser = "";  // set from Google auth
+    let currentFilter = localStorage.getItem("plat_filter") || "all";
+
+    // DOM
+    const d = (id) => document.getElementById(id);
+    const toast = (msg) => {
+      const el = d("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 2200);
+    };
+
+    // Promise wrapper for google.script.run
+    function run_(fn, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          [fn](...args);
+      });
+    }
+
+    /* ---------- Init ---------- */
+    window.initMap = init;
+
+    async function init() {
+      geocoder = new google.maps.Geocoder();
+      map = new google.maps.Map(d("map"), {
+        center: { lat: 33.4484, lng: -112.0740 },
+        zoom: 16,
+        mapTypeId: "hybrid",
+        clickableIcons: false,
+        disableDefaultUI: true,
+        gestureHandling: "greedy",
+        styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }],
+      });
+
+      d("locateBtn").addEventListener("click", locateMe_);
+      d("refreshBtn").addEventListener("click", () => fetchPins_(true));
+      d("dropBtn").addEventListener("click", dropPinAtGps_);
+      d("crumbToggle").addEventListener("change", toggleCrumbs_);
+      d("closePanel").addEventListener("click", closePanel_);
+      d("viewSelect").addEventListener("change", () => {
+        currentFilter = d("viewSelect").value;
+        localStorage.setItem("plat_filter", currentFilter);
+        applyViewFilter_();
+      });
+
+      map.addListener("click", closePanel_);
+
+      Array.from(d("topBtns").querySelectorAll("[data-top]")).forEach(btn => {
+        btn.addEventListener("click", () => showSubOptions_(btn.getAttribute("data-top")));
+      });
+
+      d("note").addEventListener("input", (e) => {
+        if (e.target.value.length > CONFIG.MAX_NOTE_LEN) {
+          e.target.value = e.target.value.slice(0, CONFIG.MAX_NOTE_LEN);
+          toast("Note limited to " + CONFIG.MAX_NOTE_LEN + " chars");
+        }
+      });
+
+      d("viewSelect").value = currentFilter;
+
+      // Get authenticated user
+      try {
+        const email = await run_("getActiveUserEmail");
+        if (email) {
+          // Extract display name from email: "brent.scheidt@domain.com" → "Brent Scheidt"
+          const name = email.split("@")[0]
+            .replace(/[._]/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase());
+          currentUser = name;
+          d("userBadge").textContent = name;
+        } else {
+          currentUser = "Unknown";
+          d("userBadge").textContent = "Not signed in";
+        }
+      } catch (e) {
+        console.warn("Could not get user email", e);
+        currentUser = "Unknown";
+        d("userBadge").textContent = "Unknown";
+      }
+
+      locateMe_();
+      await fetchPins_();
+      setInterval(fetchPins_, CONFIG.REFRESH_SEC * 1000);
+    }
+
+    /* ---------- Map helpers ---------- */
+    async function locateMe_() {
+      try {
+        const pos = await getPosition_();
+        const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        map.setCenter(latlng);
+        if (!meMarker) {
+          meMarker = new google.maps.Marker({
+            map,
+            position: latlng,
+            zIndex: 9999,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 6,
+              fillColor: "#1f6feb",
+              fillOpacity: 1,
+              strokeColor: "#fff",
+              strokeWeight: 2,
+            },
+            title: "You",
+          });
+        } else meMarker.setPosition(latlng);
+      } catch (e) {
+        console.warn(e);
+        toast("Location unavailable");
+      }
+    }
+
+    function addOrUpdateMarker_(pin) {
+      const color = markerColorFor_(pin);
+      const icon = markerIcon_(color);
+      if (markers.has(pin.pin_id)) {
+        const m = markers.get(pin.pin_id);
+        m.setPosition({ lat: pin.lat, lng: pin.lng });
+        m.setIcon(icon);
+        m.setTitle(pin.address);
+      } else {
+        const m = new google.maps.Marker({
+          map,
+          position: { lat: pin.lat, lng: pin.lng },
+          icon,
+          title: pin.address,
+        });
+        m.addListener("click", () => openPanel_(pin.pin_id));
+        markers.set(pin.pin_id, m);
+      }
+    }
+
+    function markerIcon_(hex) {
+      return {
+        path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+        fillColor: hex,
+        fillOpacity: 1,
+        strokeColor: "#111",
+        strokeWeight: 1,
+        scale: 1.2,
+        anchor: new google.maps.Point(12, 24),
+      };
+    }
+
+    function markerColorFor_(pin) {
+      if (pin.is_dnd || (pin.status || "").toLowerCase() === "dead") return "#000000";
+      const s = (pin.status || "").toLowerCase();
+      if (s === "customer") return "#1e7e34";
+      if (s === "inspection") return "#b05b00";
+      if (s === "conversation") return "#0b5ed7";
+      if (s === "damage" || s === "quick knock") return "#8a6d1a";
+      return "#666666";
+    }
+
+    /* ---------- Panel & logging ---------- */
+    function openPanel_(pin_id) {
+      const pin = pinsIndex.get(pin_id);
+      if (!pin) return;
+      selectedPin = pin;
+
+      d("p_addr").textContent = pin.address;
+      d("p_badge").style.display = pin.is_dnd ? "inline-block" : "none";
+      d("p_meta").textContent = (pin.status || "\u2014") + " \u2022 " + (pin.substatus || "") + " \u2022 " + (pin.user || "") + " \u2022 " + (fmtDate_(pin.ts) || "");
+
+      d("note").value = "";
+      d("subBtns").innerHTML = "";
+      d("panel").classList.add("open");
+
+      fetchHistory_(pin);
+    }
+
+    async function fetchHistory_(pin) {
+      const section = d("historySection");
+      const list = d("historyList");
+      section.style.display = "none";
+      list.innerHTML = "";
+
+      try {
+        const logs = await run_("getLogsClient", pin.pin_id || "", pin.address || "");
+
+        if (!logs || logs.length === 0) {
+          list.innerHTML = '<div class="history-empty">No history yet</div>';
+        } else {
+          logs.forEach(function(log) {
+            const el = document.createElement("div");
+            el.className = "history-item";
+            el.innerHTML = '<span class="hi-status">' + esc_(log.status || "\u2014") + '</span> \u2022 ' + esc_(log.substatus || "") + ' <span class="hi-time">\u2014 ' + esc_(log.user || "") + ', ' + fmtDate_(log.ts) + '</span>' + (log.note ? '<br><small>' + esc_(log.note) + '</small>' : '');
+            list.appendChild(el);
+          });
+        }
+        section.style.display = "block";
+      } catch (e) {
+        console.warn("History fetch failed", e);
+      }
+    }
+
+    function closePanel_() {
+      d("panel").classList.remove("open");
+      selectedPin = null;
+    }
+
+    function showSubOptions_(top) {
+      if (!selectedPin) {
+        toast("Select or drop a pin first");
+        return;
+      }
+      const list = suboptionsFor_(top);
+      const wrap = d("subBtns");
+      wrap.innerHTML = "";
+      list.forEach(function(label) {
+        const b = document.createElement("button");
+        b.className = "btn";
+        b.textContent = label;
+        b.addEventListener("click", () => submitLog_(top, label));
+        wrap.appendChild(b);
+      });
+    }
+
+    function suboptionsFor_(top) {
+      var opts = {
+        "Damage": ["Scouted Only", "Marked for Knock", "Visible Damage"],
+        "Quick Knock": ["Card Left", "No Answer", "Gated", "Renter", "Busy", "Do Not Knock"],
+        "Conversation": ["Qualified", "Follow-Up", "Decision Maker Not Home", "Renter\u2014Call Landlord", "Busy\u2014Come Back", "Disqualified"],
+        "Inspection": ["Scheduled", "Done \u2014 Claim Recommended", "Done \u2014 No/Insufficient Damage", "Photos Taken"],
+        "Customer": ["Contract Signed", "Claim Filed", "Both", "Built"],
+        "Dead": ["Do Not Knock", "Hostile", "Not Interested", "Competitor", "Out of Territory"]
+      };
+      return opts[top] || [];
+    }
+
+    async function submitLog_(status, substatus) {
+      if (!currentUser) { toast("Not signed in"); return; }
+      if (!selectedPin) { toast("Select or drop a pin first"); return; }
+
+      if (submitLog_.lock && Date.now() - submitLog_.lock < 3000) return;
+      submitLog_.lock = Date.now();
+
+      const note = (d("note").value || "").slice(0, CONFIG.MAX_NOTE_LEN);
+
+      const payload = {
+        pin_id: selectedPin.pin_id,
+        address: selectedPin.address,
+        lat: selectedPin.lat || null,
+        lng: selectedPin.lng || null,
+        status: status,
+        substatus: substatus,
+        note: note,
+        user: currentUser,
+        device: navigator.userAgent || "",
+        source: "app",
+      };
+
+      try {
+        const result = await run_("submitLogClient", payload);
+        if (result && result.ok) {
+          toast("Logged");
+          d("subBtns").innerHTML = "";
+          d("note").value = "";
+          setTimeout(() => fetchPins_(true), 500);
+        } else {
+          toast("Log failed");
+        }
+      } catch (e) {
+        console.warn(e);
+        localStorage.setItem("plat_pending_log", JSON.stringify(payload));
+        toast("Offline. Will retry\u2026");
+      }
+    }
+
+    /* ---------- Drop pin ---------- */
+    async function dropPinAtGps_() {
+      if (!currentUser) { toast("Not signed in"); return; }
+
+      try {
+        const pos = await getPosition_();
+        const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        map.setCenter(latlng);
+        const addr = await reverseGeocode_(latlng);
+
+        const temp = {
+          pin_id: findExistingByAddress_(addr) || "",
+          address: addr,
+          lat: latlng.lat,
+          lng: latlng.lng,
+          status: "Damage",
+          substatus: "Marked for Knock",
+          user: currentUser,
+          is_dnd: false,
+          ts: new Date().toISOString(),
+        };
+        pinsIndex.set(temp.pin_id || addr, temp);
+        selectedPin = temp;
+        addOrUpdateMarker_({ ...temp, pin_id: temp.pin_id || addr });
+        openPanel_(temp.pin_id || addr);
+        toast("Pin placed");
+      } catch (e) {
+        console.warn(e);
+        toast("Could not drop pin");
+      }
+    }
+
+    function findExistingByAddress_(addr) {
+      for (const [id, p] of pinsIndex.entries()) {
+        if ((p.address || "").toLowerCase() === addr.toLowerCase()) return id;
+      }
+      return "";
+    }
+
+    /* ---------- Fetch pins ---------- */
+    async function fetchPins_(force) {
+      try {
+        const arr = await run_("getPinsClient");
+        const hash = arr.length + ":" + ((arr[0] && arr[0].ts) || "");
+        if (!force && hash === lastFetchHash) return;
+        lastFetchHash = hash;
+
+        const freshIds = new Set();
+        pinsIndex.clear();
+        arr.forEach(function(p) {
+          pinsIndex.set(p.pin_id, p);
+          addOrUpdateMarker_(p);
+          freshIds.add(p.pin_id);
+        });
+
+        for (const [id, m] of markers.entries()) {
+          if (!freshIds.has(id) && !pinsIndex.has(id)) {
+            m.setMap(null);
+            markers.delete(id);
+          }
+        }
+
+        applyViewFilter_();
+        updatePinCount_();
+
+        // Retry pending log
+        const pending = localStorage.getItem("plat_pending_log");
+        if (pending) {
+          localStorage.removeItem("plat_pending_log");
+          try {
+            await run_("submitLogClient", JSON.parse(pending));
+            toast("Pending log sent");
+          } catch (e) { console.warn(e); }
+        }
+      } catch (e) {
+        console.warn(e);
+        toast("Fetch failed");
+      }
+    }
+
+    /* ---------- View filter ---------- */
+    function applyViewFilter_() {
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const weekStart = todayStart - 6 * 86400000;
+
+      for (const [id, pin] of pinsIndex.entries()) {
+        const m = markers.get(id);
+        if (!m) continue;
+
+        var visible = true;
+        if (currentFilter === "mine") {
+          visible = currentUser && (pin.user || "").toLowerCase() === currentUser.toLowerCase();
+        } else if (currentFilter === "today") {
+          visible = pin.ts && new Date(pin.ts).getTime() >= todayStart;
+        } else if (currentFilter === "week") {
+          visible = pin.ts && new Date(pin.ts).getTime() >= weekStart;
+        }
+        m.setVisible(visible);
+      }
+      updatePinCount_();
+    }
+
+    function updatePinCount_() {
+      var visible = 0, total = 0;
+      for (const [id] of pinsIndex.entries()) {
+        total++;
+        const m = markers.get(id);
+        if (m && m.getVisible()) visible++;
+      }
+      const el = d("pinCount");
+      if (el) {
+        el.textContent = currentFilter === "all"
+          ? total + " pin" + (total !== 1 ? "s" : "")
+          : visible + "/" + total;
+      }
+    }
+
+    /* ---------- Breadcrumbs ---------- */
+    function toggleCrumbs_(e) {
+      if (e.target.checked) {
+        crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
+        toast("Recording route\u2026");
+      } else {
+        clearInterval(crumbTimer); crumbTimer = null;
+        toast("Route recording off");
+      }
+    }
+
+    async function sendCrumb_() {
+      try {
+        if (!currentUser) return;
+        const pos = await getPosition_();
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        const last = JSON.parse(localStorage.getItem("plat_last_crumb") || "null");
+        if (last && haversineM_(last.lat, last.lng, lat, lng) < CONFIG.BREADCRUMB_MIN_DELTA_M) return;
+
+        localStorage.setItem("plat_last_crumb", JSON.stringify({ lat: lat, lng: lng }));
+        await run_("submitBreadcrumbClient", {
+          user: currentUser, session_id: sessionId, lat: lat, lng: lng,
+          speed_kmh: null, accuracy_m: pos.coords.accuracy || null
+        });
+      } catch (e) { console.warn(e); }
+    }
+
+    /* ---------- Utils ---------- */
+    function getPosition_() {
+      return new Promise(function(res, rej) {
+        navigator.geolocation.getCurrentPosition(res, rej, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+      });
+    }
+    function reverseGeocode_(latlng) {
+      return new Promise(function(resolve, reject) {
+        geocoder.geocode({ location: latlng }, function(results, status) {
+          if (status === "OK" && results && results[0]) resolve(results[0].formatted_address);
+          else reject(new Error("No address"));
+        });
+      });
+    }
+    function randId_() { return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
+    function esc_(s) { var el = document.createElement("span"); el.textContent = s; return el.innerHTML; }
+    function fmtDate_(iso) { if (!iso) return ""; try { var dd = new Date(iso); return dd.toLocaleString(); } catch(e) { return ""; } }
+    function haversineM_(lat1, lon1, lat2, lon2) {
+      var R = 6371000, toRad = function(v) { return v * Math.PI / 180; };
+      var dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+  })();
+  </script>
+
+  <!-- Google Maps JS API -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzfIev2fEMKIa0bDe7FWwqb7lOrhVLstM&callback=initMap&libraries=places"></script>
+</body>
+
+</html>
