@@ -656,7 +656,8 @@
   }
 
   /* ---------- Dragon Menu ---------- */
-  function toggleDragonMenu_() {
+  function toggleDragonMenu_(e) {
+    e.stopPropagation();
     d("dragonMenu").classList.toggle("show");
   }
 
@@ -673,7 +674,7 @@
 
   // Close dragon menu on outside click
   document.addEventListener("click", (e) => {
-    if (!e.target.closest("#dragonBtn") && !e.target.closest("#dragonMenu")) {
+    if (!e.target.closest("#dragonMenu")) {
       closeDragonMenu_();
     }
   });
