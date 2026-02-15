@@ -1,6 +1,6 @@
 /**
  * Platinum DoorKnock — Apps Script backend + frontend host
- * Version: v0.7.0 (02_14_26)
+ * Version: v0.8.0 (02_15_26)
  * Deployment: HtmlService — single URL, Google auth built-in
  * Sheet: "Platinum DoorKnock - Production"
  * Tabs: Pins / Logs / Breadcrumbs / Config
@@ -21,7 +21,9 @@ function doGet(e) {
     // API endpoints (backward compat + smoke tests)
     if (mode === "getpins") return json_(getPins_());
     if (mode === "getlogs") return json_(getLogs_(e.parameter.pin_id || "", e.parameter.address || ""));
-    if (mode === "version") return json_({ version: getConfig_("version") || "0.7.0" });
+    if (mode === "getbreadcrumbs") return json_(getBreadcrumbs_(e.parameter));
+    if (mode === "getroutesessions") return json_(getRouteSessions_());
+    if (mode === "version") return json_({ version: getConfig_("version") || "0.8.0" });
     // Default: serve the web app
     return HtmlService.createHtmlOutputFromFile('Index')
       .setTitle('Platinum DoorKnock')
@@ -123,6 +125,92 @@ function getLogs_(pinId, address) {
     ts: r[idx.ts] ? String(r[idx.ts]) : "",
   }));
   out.sort((a, b) => (b.ts || "").localeCompare(a.ts || ""));
+  return out;
+}
+
+/* ============ Get Breadcrumbs ============ */
+function getBreadcrumbs_(params) {
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(SHEET.BREADCRUMBS);
+  if (!sh) return [];
+  const values = getRows_(sh);
+  if (values.length <= 1) return [];
+  const headers = values[0];
+  const rows = values.slice(1);
+  const idx = colIndex_(headers, [
+    "crumb_id","user","session_id","lat","lng","speed_kmh","accuracy_m","ts"
+  ]);
+  
+  // Optional filter by session_id or user
+  const filterSession = (params && params.session_id) ? params.session_id.trim().toLowerCase() : "";
+  const filterUser = (params && params.user) ? params.user.trim().toLowerCase() : "";
+  
+  const out = rows.filter(r => {
+    if (filterSession && (r[idx.session_id] || "").toLowerCase() !== filterSession) return false;
+    if (filterUser && (r[idx.user] || "").toLowerCase() !== filterUser) return false;
+    return true;
+  }).map(r => ({
+    crumb_id: r[idx.crumb_id] || "",
+    user: r[idx.user] || "",
+    session_id: r[idx.session_id] || "",
+    lat: num_(r[idx.lat]),
+    lng: num_(r[idx.lng]),
+    speed_kmh: num_(r[idx.speed_kmh]),
+    accuracy_m: num_(r[idx.accuracy_m]),
+    ts: r[idx.ts] ? String(r[idx.ts]) : "",
+  }));
+  out.sort((a, b) => (a.ts || "").localeCompare(b.ts || "")); // chronological
+  return out;
+}
+
+/* ============ Get Route Sessions (summary) ============ */
+function getRouteSessions_() {
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(SHEET.BREADCRUMBS);
+  if (!sh) return [];
+  const values = getRows_(sh);
+  if (values.length <= 1) return [];
+  const headers = values[0];
+  const rows = values.slice(1);
+  const idx = colIndex_(headers, [
+    "crumb_id","user","session_id","lat","lng","speed_kmh","accuracy_m","ts"
+  ]);
+  
+  // Group by session_id
+  const sessions = {};
+  rows.forEach(r => {
+    const sid = r[idx.session_id] || "";
+    if (!sid) return;
+    if (!sessions[sid]) {
+      sessions[sid] = {
+        session_id: sid,
+        user: r[idx.user] || "",
+        points: 0,
+        first_ts: r[idx.ts] ? String(r[idx.ts]) : "",
+        last_ts: r[idx.ts] ? String(r[idx.ts]) : "",
+        first_lat: num_(r[idx.lat]),
+        first_lng: num_(r[idx.lng]),
+        last_lat: num_(r[idx.lat]),
+        last_lng: num_(r[idx.lng]),
+      };
+    }
+    const s = sessions[sid];
+    s.points++;
+    const ts = r[idx.ts] ? String(r[idx.ts]) : "";
+    if (ts && (!s.first_ts || ts < s.first_ts)) {
+      s.first_ts = ts;
+      s.first_lat = num_(r[idx.lat]);
+      s.first_lng = num_(r[idx.lng]);
+    }
+    if (ts && ts > s.last_ts) {
+      s.last_ts = ts;
+      s.last_lat = num_(r[idx.lat]);
+      s.last_lng = num_(r[idx.lng]);
+    }
+  });
+  
+  const out = Object.values(sessions);
+  out.sort((a, b) => (b.last_ts || "").localeCompare(a.last_ts || "")); // newest first
   return out;
 }
 

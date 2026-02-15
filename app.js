@@ -26,6 +26,12 @@
   let lastFetchHash = "";
   let sessionId = randId_();
   let crumbTimer = null;
+  let sessionActive = false;
+  let sessionPaused = false;
+  let sessionStartMs = 0;
+  let sessionElapsedMs = 0;
+  let sessionKnockCount = 0;
+  let sessionDisplayTimer = null;
   let currentFilter = localStorage.getItem("plat_filter") || "all";
 
   // Auth state
@@ -63,7 +69,8 @@
     d("locateBtn").addEventListener("click", locateMe_);
     d("refreshBtn").addEventListener("click", fetchPins_);
     d("dropBtn").addEventListener("click", dropPinAtGps_);
-    d("crumbToggle").addEventListener("change", toggleCrumbs_);
+    d("sessionToggle").addEventListener("click", toggleSession_);
+    d("sessionPause").addEventListener("click", togglePause_);
     d("closePanel").addEventListener("click", closePanel_);
     d("saveBtn").addEventListener("click", saveCurrentPin_);
     d("viewSelect").addEventListener("change", () => {
@@ -448,6 +455,11 @@
     const status = selectedStatus || "Damage";
     const sub = selectedSub || "Scouted Only";
     submitLog_(status, sub);
+    // Increment knock count if session active
+    if (sessionActive) {
+      sessionKnockCount++;
+      updateSessionUI_();
+    }
     // Visual feedback
     const btn = d("saveBtn");
     btn.textContent = "✅ SAVED";
@@ -639,17 +651,84 @@
   }
 
   /* ---------- Breadcrumbs (optional, off by default) ---------- */
-  function toggleCrumbs_(e) {
-    const pill = e.target.closest(".pill");
-    if (e.target.checked) {
-      crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
-      if (pill) pill.classList.add("recording");
-      toast("🔴 Recording route…");
-    } else {
+  function toggleSession_() {
+    if (sessionActive) {
+      // Stop session
+      sessionActive = false;
+      sessionPaused = false;
       clearInterval(crumbTimer); crumbTimer = null;
-      if (pill) pill.classList.remove("recording");
-      toast("Route recording off");
+      clearInterval(sessionDisplayTimer); sessionDisplayTimer = null;
+      d("sessionToggle").classList.remove("on");
+      d("sessionToggle").textContent = "Session";
+      d("sessionBar").classList.remove("active");
+      d("sessionTimer").classList.remove("active");
+      d("sessionPause").style.display = "none";
+      d("sessionKnocks").style.display = "none";
+      toast(`Session ended — ${sessionKnockCount} knocks, ${formatTimer_(sessionElapsedMs)}`);
+    } else {
+      // Start session
+      sessionActive = true;
+      sessionPaused = false;
+      sessionId = randId_();
+      sessionStartMs = Date.now();
+      sessionElapsedMs = 0;
+      sessionKnockCount = 0;
+      crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
+      sessionDisplayTimer = setInterval(updateSessionUI_, 1000);
+      d("sessionToggle").classList.add("on");
+      d("sessionToggle").textContent = "LIVE";
+      d("sessionBar").classList.add("active");
+      d("sessionTimer").classList.add("active");
+      d("sessionPause").style.display = "block";
+      d("sessionPause").textContent = "⏸";
+      d("sessionKnocks").style.display = "block";
+      updateSessionUI_();
+      sendCrumb_(); // immediate first breadcrumb
+      toast("🔴 Session started — recording route");
     }
+  }
+
+  function togglePause_() {
+    if (!sessionActive) return;
+    if (sessionPaused) {
+      // Resume
+      sessionPaused = false;
+      sessionStartMs = Date.now() - sessionElapsedMs;
+      crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
+      sessionDisplayTimer = setInterval(updateSessionUI_, 1000);
+      d("sessionPause").textContent = "⏸";
+      d("sessionToggle").textContent = "LIVE";
+      d("sessionToggle").classList.add("on");
+      d("sessionTimer").classList.add("active");
+      toast("▶️ Session resumed");
+    } else {
+      // Pause
+      sessionPaused = true;
+      sessionElapsedMs = Date.now() - sessionStartMs;
+      clearInterval(crumbTimer); crumbTimer = null;
+      clearInterval(sessionDisplayTimer); sessionDisplayTimer = null;
+      d("sessionPause").textContent = "▶️";
+      d("sessionToggle").textContent = "PAUSED";
+      d("sessionToggle").classList.remove("on");
+      d("sessionTimer").classList.remove("active");
+      toast("⏸ Session paused");
+    }
+  }
+
+  function updateSessionUI_() {
+    if (!sessionActive) return;
+    sessionElapsedMs = Date.now() - sessionStartMs;
+    d("sessionTimer").textContent = formatTimer_(sessionElapsedMs);
+    d("sessionKnocks").textContent = `${sessionKnockCount} knock${sessionKnockCount !== 1 ? "s" : ""}`;
+  }
+
+  function formatTimer_(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return `${m}:${String(s).padStart(2, "0")}`;
   }
 
   async function sendCrumb_() {

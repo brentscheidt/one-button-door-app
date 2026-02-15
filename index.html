@@ -353,6 +353,97 @@
       }
     }
 
+    /* ---------- Session bar ---------- */
+    #sessionBar {
+      position: fixed;
+      bottom: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 19;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .45rem .7rem;
+      background: rgba(18, 18, 20, .92);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .5);
+      transition: opacity .25s, transform .25s;
+    }
+
+    #sessionBar.active {
+      border-color: rgba(220, 38, 38, .4);
+      box-shadow: 0 4px 20px rgba(220, 38, 38, .15), 0 4px 20px rgba(0, 0, 0, .5);
+    }
+
+    #sessionToggle {
+      padding: .45rem .8rem;
+      border-radius: 10px;
+      font-size: .88rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1.5px solid rgba(255, 255, 255, .15);
+      background: rgba(255, 255, 255, .08);
+      color: #e8e8e8;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+
+    #sessionToggle.on {
+      background: rgba(220, 38, 38, .2);
+      border-color: rgba(220, 38, 38, .5);
+      color: #ff6b6b;
+    }
+
+    #sessionToggle.on::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      margin-right: 6px;
+      vertical-align: middle;
+      animation: rec-blink 1.2s ease-in-out infinite;
+    }
+
+    #sessionTimer {
+      font-variant-numeric: tabular-nums;
+      font-size: .95rem;
+      font-weight: 600;
+      color: #ccc;
+      min-width: 60px;
+      text-align: center;
+    }
+
+    #sessionTimer.active {
+      color: #ff6b6b;
+    }
+
+    #sessionPause {
+      padding: .35rem .55rem;
+      border-radius: 8px;
+      font-size: .82rem;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .06);
+      color: #aaa;
+      display: none;
+    }
+
+    #sessionPause:active {
+      background: rgba(255, 255, 255, .12);
+    }
+
+    #sessionKnocks {
+      font-size: .78rem;
+      color: #888;
+      white-space: nowrap;
+      display: none;
+    }
+
     /* ---------- Buttons ---------- */
     .btns {
       display: flex;
@@ -587,9 +678,7 @@
         <button id="refreshBtn" title="Refresh">↻</button>
         <button id="locateBtn" title="Center on me">◎</button>
       </div>
-      <div class="row-2">
-        <label class="pill"><input type="checkbox" id="crumbToggle" /> Route</label>
-      </div>
+      <div class="row-2" style="display:none;"></div>
     </div>
     <button id="dropBtn" aria-label="Drop pin at GPS">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -601,6 +690,12 @@
         <circle cx="12" cy="12" r="2" fill="#c8b48c" stroke="none" />
       </svg>
     </button>
+    <div id="sessionBar">
+      <button id="sessionToggle">Session</button>
+      <span id="sessionTimer">0:00</span>
+      <button id="sessionPause" title="Pause">⏸</button>
+      <span id="sessionKnocks">0 knocks</span>
+    </div>
     <div id="map"></div>
 
     <div id="panel">
