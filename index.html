@@ -141,6 +141,95 @@
       background: rgba(255, 255, 255, .06);
     }
 
+    /* ---------- Dragon Logo ---------- */
+    #dragonBtn {
+      position: fixed;
+      top: 10px;
+      right: 12px;
+      z-index: 30;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(200, 180, 140, .4);
+      background: rgba(18, 18, 20, .85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, .5);
+      transition: transform .15s, border-color .2s;
+    }
+
+    #dragonBtn:active {
+      transform: scale(.92);
+    }
+
+    #dragonBtn img {
+      width: 30px;
+      height: 30px;
+      filter: invert(1) brightness(1.2);
+      pointer-events: none;
+    }
+
+    #dragonMenu {
+      display: none;
+      position: fixed;
+      top: 58px;
+      right: 12px;
+      z-index: 31;
+      background: rgba(18, 18, 20, .95);
+      border: 1px solid rgba(200, 180, 140, .2);
+      border-radius: 12px;
+      padding: .35rem 0;
+      min-width: 200px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    #dragonMenu.show {
+      display: block;
+    }
+
+    #dragonMenu .dm-header {
+      font-size: .68rem;
+      color: #888;
+      padding: .4rem .8rem .2rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    #dragonMenu .dm-item {
+      font-size: .82rem;
+      color: #e8e8e8;
+      padding: .55rem .8rem;
+      cursor: pointer;
+      transition: background .15s;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    #dragonMenu .dm-item:hover,
+    #dragonMenu .dm-item:active {
+      background: rgba(200, 180, 140, .08);
+    }
+
+    #dragonMenu .dm-item .dm-icon {
+      font-size: 1rem;
+      width: 1.2rem;
+      text-align: center;
+    }
+
+    #dragonMenu .dm-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, .06);
+      margin: .25rem 0;
+    }
+
     /* ---------- FAB (Drop Pin) ---------- */
     @keyframes fab-pulse {
       0% {
@@ -679,6 +768,17 @@
         <button id="locateBtn" title="Center on me">◎</button>
       </div>
       <div class="row-2" style="display:none;"></div>
+    </div>
+    <button id="dragonBtn" aria-label="Menu">
+      <img src="logo.png" alt="Platinum DoorKnock" />
+    </button>
+    <div id="dragonMenu">
+      <div class="dm-header">Platinum DoorKnock</div>
+      <div class="dm-item" id="dmRoutes"><span class="dm-icon">🗺️</span> View Routes</div>
+      <div class="dm-item" id="dmStats"><span class="dm-icon">📊</span> Session Stats</div>
+      <div class="dm-divider"></div>
+      <div class="dm-item" id="dmSettings"><span class="dm-icon">⚙️</span> Settings</div>
+      <div class="dm-item" id="dmAbout"><span class="dm-icon">🐉</span> About v0.8.0</div>
     </div>
     <button id="dropBtn" aria-label="Drop pin at GPS">
       <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">

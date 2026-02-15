@@ -73,6 +73,11 @@
     d("sessionPause").addEventListener("click", togglePause_);
     d("closePanel").addEventListener("click", closePanel_);
     d("saveBtn").addEventListener("click", saveCurrentPin_);
+    d("dragonBtn").addEventListener("click", toggleDragonMenu_);
+    d("dmRoutes").addEventListener("click", () => { closeDragonMenu_(); toast("Route display coming soon!"); });
+    d("dmStats").addEventListener("click", () => { closeDragonMenu_(); showSessionStats_(); });
+    d("dmSettings").addEventListener("click", () => { closeDragonMenu_(); toast("Settings coming soon!"); });
+    d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by BSRG 🐉"); });
     d("viewSelect").addEventListener("change", () => {
       currentFilter = d("viewSelect").value;
       localStorage.setItem("plat_filter", currentFilter);
@@ -649,6 +654,29 @@
         : `${visible}/${total}`;
     }
   }
+
+  /* ---------- Dragon Menu ---------- */
+  function toggleDragonMenu_() {
+    d("dragonMenu").classList.toggle("show");
+  }
+
+  function closeDragonMenu_() {
+    d("dragonMenu").classList.remove("show");
+  }
+
+  function showSessionStats_() {
+    const elapsed = sessionActive ? formatTimer_(Date.now() - sessionStartMs) : "0:00";
+    const knocks = sessionKnockCount;
+    const status = sessionActive ? (sessionPaused ? "Paused" : "Active") : "Inactive";
+    toast(`Session: ${status} | Time: ${elapsed} | Knocks: ${knocks}`);
+  }
+
+  // Close dragon menu on outside click
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#dragonBtn") && !e.target.closest("#dragonMenu")) {
+      closeDragonMenu_();
+    }
+  });
 
   /* ---------- Breadcrumbs (optional, off by default) ---------- */
   function toggleSession_() {
