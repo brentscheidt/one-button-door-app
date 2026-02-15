@@ -1,8 +1,8 @@
-/* BSRG DoorKnock — v0.5.1
+/* BSRG DoorKnock — v0.5.2
  * Frontend map + fast logging
  * Date: 02_14_26
  * Decisions: 30s polling; BLACK=DEAD; address-anchored pins; 1 pending offline log
- * Changes: View filter (All/Mine/Today/Week); close panel; UX polish
+ * Changes: Pin history, pin count, stale marker cleanup, UI overhaul
  */
 
 (() => {
@@ -176,6 +176,38 @@
     d("note").value = "";
     d("subBtns").innerHTML = "";
     d("panel").classList.add("open");
+
+    // Fetch history async
+    fetchHistory_(pin);
+  }
+
+  async function fetchHistory_(pin) {
+    const section = d("historySection");
+    const list = d("historyList");
+    section.style.display = "none";
+    list.innerHTML = "";
+
+    try {
+      const params = new URLSearchParams({ mode: "getLogs" });
+      if (pin.pin_id) params.set("pin_id", pin.pin_id);
+      if (pin.address) params.set("address", pin.address);
+      const res = await fetch(`${CONFIG.SCRIPT_BASE}?${params}`);
+      const logs = await res.json();
+
+      if (!logs || logs.length === 0) {
+        list.innerHTML = '<div class="history-empty">No history yet</div>';
+      } else {
+        logs.forEach(log => {
+          const el = document.createElement("div");
+          el.className = "history-item";
+          el.innerHTML = `<span class="hi-status">${log.status || "—"}</span> • ${log.substatus || ""} <span class="hi-time">— ${log.user || ""}, ${fmtDate_(log.ts)}</span>${log.note ? '<br><small>' + esc_(log.note) + '</small>' : ''}`;
+          list.appendChild(el);
+        });
+      }
+      section.style.display = "block";
+    } catch (e) {
+      console.warn("History fetch failed", e);
+    }
   }
 
   function closePanel_() {
@@ -312,14 +344,27 @@
       if (!force && hash === lastFetchHash) return; // skip redraw
       lastFetchHash = hash;
 
+      // Track which pin_ids came from backend
+      const freshIds = new Set();
+
       // rebuild index
       pinsIndex.clear();
       arr.forEach(p => {
         pinsIndex.set(p.pin_id, p);
         addOrUpdateMarker_(p);
+        freshIds.add(p.pin_id);
       });
 
+      // Remove stale markers (pins deleted or no longer returned)
+      for (const [id, m] of markers.entries()) {
+        if (!freshIds.has(id) && !pinsIndex.has(id)) {
+          m.setMap(null);
+          markers.delete(id);
+        }
+      }
+
       applyViewFilter_(); // respect active filter
+      updatePinCount_();
 
       // Retry pending log if exists
       const pending = localStorage.getItem("bsrg_pending_log");
@@ -363,6 +408,23 @@
       // "all" → always visible
 
       m.setVisible(visible);
+    }
+    updatePinCount_();
+  }
+
+  /* ---------- Pin count ---------- */
+  function updatePinCount_() {
+    let visible = 0, total = 0;
+    for (const [id] of pinsIndex.entries()) {
+      total++;
+      const m = markers.get(id);
+      if (m && m.getVisible()) visible++;
+    }
+    const el = d("pinCount");
+    if (el) {
+      el.textContent = currentFilter === "all"
+        ? `${total} pin${total !== 1 ? 's' : ''}`
+        : `${visible}/${total}`;
     }
   }
 
@@ -414,6 +476,7 @@
     });
   }
   function randId_() { return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2); }
+  function esc_(s) { const el = document.createElement("span"); el.textContent = s; return el.innerHTML; }
   function fmtDate_(iso) { if (!iso) return ""; try { const d = new Date(iso); return d.toLocaleString(); } catch { return "" } }
   function haversineM_(lat1, lon1, lat2, lon2) {
     const R = 6371000, toRad = (v) => v * Math.PI / 180;

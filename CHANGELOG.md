@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.2 — 02_14_26
+**Pin history + UI overhaul**
+- ✅ **Pin history view** — tap any pin to see all past log entries (fetched from `getLogs` endpoint).
+- ✅ **`getLogs` backend endpoint** — `GET ?mode=getLogs&pin_id=X` or `&address=Y` returns log history sorted newest-first.
+- ✅ **Pin count indicator** — topbar shows total pins (or visible/total when filtering).
+- ✅ **Stale marker cleanup** — markers for deleted pins are removed on refresh.
+- ✅ **UI overhaul** — Inter font, gradient buttons, glassmorphism panel, smooth toast animations, mobile-first two-row topbar.
+- ✅ **XSS protection** — user notes are HTML-escaped in history display.
+- ✅ **Panel scrollable** — history section is scrollable for pins with many log entries.
+
 ## v0.5.1 — 02_14_26
 **View filter + UX polish**
 - ✅ Wired up View Filter dropdown: All Pins / My Pins / Today / This Week (persists across reloads).

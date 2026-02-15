@@ -18,11 +18,45 @@ function doGet(e) {
   try {
     const mode = (e.parameter.mode || "").toLowerCase();
     if (mode === "getpins") return json_(getPins_());
+    if (mode === "getlogs") return json_(getLogs_(e.parameter.pin_id || "", e.parameter.address || ""));
     if (mode === "version") return json_({ version: getConfig_("version") || "0.0.0" });
     return json_({ ok: true, now: new Date().toISOString() });
   } catch (err) {
     return error_(err);
   }
+}
+
+/* ------------ Get Logs for a Pin ------------- */
+function getLogs_(pinId, address) {
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(SHEET.LOGS);
+  if (!sh) return [];
+  const values = getRows_(sh);
+  if (values.length <= 1) return [];
+  const headers = values[0];
+  const rows = values.slice(1);
+  const idx = colIndex_(headers, [
+    "log_id","pin_id","address","lat","lng","status","substatus","note","user","ts","device","source"
+  ]);
+  const needle_id = (pinId || "").trim().toLowerCase();
+  const needle_addr = (address || "").trim().toLowerCase();
+  const out = rows.filter(r => {
+    if (needle_id && (r[idx.pin_id] || "").toLowerCase() === needle_id) return true;
+    if (needle_addr && (r[idx.address] || "").toLowerCase() === needle_addr) return true;
+    return false;
+  }).map(r => ({
+    log_id: r[idx.log_id] || "",
+    pin_id: r[idx.pin_id] || "",
+    address: r[idx.address] || "",
+    status: r[idx.status] || "",
+    substatus: r[idx.substatus] || "",
+    note: r[idx.note] || "",
+    user: r[idx.user] || "",
+    ts: r[idx.ts] || "",
+  }));
+  // Sort newest first
+  out.sort((a, b) => (b.ts || "").localeCompare(a.ts || ""));
+  return out;
 }
 
 function doPost(e) {

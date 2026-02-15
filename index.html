@@ -4,60 +4,114 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-  <title>BSRG DoorKnock — v0.5.1</title>
+  <title>BSRG DoorKnock — v0.5.2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
     html,
     body,
     #app {
       height: 100%;
       margin: 0;
-      font-family: -apple-system, Inter, Arial, sans-serif;
-      background: #0b0b0b;
-      color: #eee;
+      font-family: 'Inter', -apple-system, Arial, sans-serif;
+      background: #0a0a0b;
+      color: #e8e8e8;
+      -webkit-tap-highlight-color: transparent;
     }
 
+    /* ---------- Topbar ---------- */
     #topbar {
       display: flex;
-      gap: .5rem;
+      gap: .35rem;
       align-items: center;
-      padding: .5rem;
-      background: #111;
-      border-bottom: 1px solid #222;
+      padding: .4rem .5rem;
+      background: linear-gradient(180deg, #161618 0%, #111113 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
       position: sticky;
       top: 0;
       z-index: 10;
+      flex-wrap: wrap;
+    }
+
+    #topbar .row-1 {
+      display: flex;
+      gap: .35rem;
+      align-items: center;
+      width: 100%;
+    }
+
+    #topbar .row-2 {
+      display: flex;
+      gap: .35rem;
+      align-items: center;
+      width: 100%;
     }
 
     select,
     input,
     button {
-      background: #1a1a1a;
-      color: #eee;
-      border: 1px solid #333;
+      font-family: inherit;
+      font-size: .82rem;
+      background: rgba(255, 255, 255, .06);
+      color: #e8e8e8;
+      border: 1px solid rgba(255, 255, 255, .1);
       border-radius: 8px;
-      padding: .4rem .6rem;
+      padding: .4rem .55rem;
+      outline: none;
+      transition: border-color .15s, background .15s;
+    }
+
+    select:focus,
+    button:focus {
+      border-color: rgba(31, 111, 235, .5);
+    }
+
+    button:active {
+      transform: scale(.97);
     }
 
     button.primary {
-      background: #1f6feb;
-      border-color: #1f6feb;
+      background: linear-gradient(135deg, #1f6feb 0%, #1a5bc7 100%);
+      border-color: rgba(31, 111, 235, .4);
+      font-weight: 600;
+      flex: 1;
     }
 
+    .pin-count {
+      font-size: .72rem;
+      color: #888;
+      padding: 0 .3rem;
+      white-space: nowrap;
+    }
+
+    /* ---------- Map ---------- */
     #map {
       width: 100%;
-      height: calc(100% - 58px);
+      height: calc(100% - 80px);
     }
 
+    /* ---------- Panel ---------- */
     #panel {
       position: fixed;
       left: 0;
       right: 0;
       bottom: 0;
-      background: #111;
-      border-top: 1px solid #222;
-      padding: .5rem;
+      background: linear-gradient(180deg, #151517 0%, #0e0e10 100%);
+      border-top: 1px solid rgba(255, 255, 255, .08);
+      padding: .6rem .6rem .8rem;
       transform: translateY(100%);
-      transition: transform .25s ease;
+      transition: transform .25s cubic-bezier(.4, 0, .2, 1);
+      z-index: 20;
+      max-height: 70vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     #panel.open {
@@ -65,39 +119,77 @@
     }
 
     #panel h3 {
-      margin: .2rem 0;
-      font-size: 1rem;
+      margin: .15rem 0;
+      font-size: .95rem;
+      font-weight: 600;
+      padding-right: 2rem;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: .35rem;
+      right: .5rem;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 8px;
+      color: #999;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: .15rem .45rem;
+      line-height: 1;
+      z-index: 5;
+    }
+
+    .close-btn:active {
+      color: #fff;
+      background: rgba(255, 255, 255, .12);
     }
 
     .row {
       display: flex;
-      gap: .5rem;
+      gap: .4rem;
       align-items: center;
       flex-wrap: wrap;
     }
 
-    .pill {
-      padding: .25rem .5rem;
-      border-radius: 999px;
-      background: #222;
-      border: 1px solid #333;
-      font-size: .85rem;
+    .meta {
+      font-size: .78rem;
+      color: #888;
+      margin-bottom: .35rem;
     }
 
+    .pill {
+      padding: .25rem .45rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .1);
+      font-size: .78rem;
+      cursor: pointer;
+    }
+
+    /* ---------- Buttons ---------- */
     .btns {
       display: flex;
-      gap: .4rem;
+      gap: .35rem;
       flex-wrap: wrap;
       margin-top: .3rem;
     }
 
     .btn {
-      padding: .55rem .7rem;
+      padding: .5rem .65rem;
       border-radius: 10px;
-      border: 1px solid #333;
-      background: #1a1a1a;
-      color: #eee;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .06);
+      color: #e8e8e8;
       cursor: pointer;
+      font-size: .82rem;
+      font-weight: 500;
+      transition: transform .1s, opacity .1s;
+    }
+
+    .btn:active {
+      transform: scale(.95);
+      opacity: .85;
     }
 
     .btn.big {
@@ -105,85 +197,142 @@
     }
 
     .btn.red {
-      background: #a01515;
-      border-color: #a01515;
+      background: linear-gradient(135deg, #a01515 0%, #7a1010 100%);
+      border-color: rgba(160, 21, 21, .5);
     }
 
     .btn.green {
-      background: #1e7e34;
-      border-color: #1e7e34;
+      background: linear-gradient(135deg, #1e7e34 0%, #165f27 100%);
+      border-color: rgba(30, 126, 52, .5);
     }
 
     .btn.blue {
-      background: #0b5ed7;
-      border-color: #0b5ed7;
+      background: linear-gradient(135deg, #0b5ed7 0%, #0948a8 100%);
+      border-color: rgba(11, 94, 215, .5);
     }
 
     .btn.yellow {
-      background: #8a6d1a;
-      border-color: #8a6d1a;
+      background: linear-gradient(135deg, #8a6d1a 0%, #6b5514 100%);
+      border-color: rgba(138, 109, 26, .5);
     }
 
     .btn.orange {
-      background: #b05b00;
-      border-color: #b05b00;
+      background: linear-gradient(135deg, #b05b00 0%, #8a4700 100%);
+      border-color: rgba(176, 91, 0, .5);
     }
 
+    /* ---------- Note textarea ---------- */
     .note {
       width: 100%;
-      padding: .45rem;
+      padding: .4rem;
       border-radius: 8px;
-      border: 1px solid #333;
-      background: #0f0f0f;
-      color: #eee;
+      border: 1px solid rgba(255, 255, 255, .1);
+      background: rgba(255, 255, 255, .04);
+      color: #e8e8e8;
+      font-family: inherit;
+      font-size: .82rem;
+      resize: none;
     }
 
+    .note:focus {
+      border-color: rgba(31, 111, 235, .4);
+      outline: none;
+    }
+
+    /* ---------- History ---------- */
+    #historySection {
+      margin-top: .5rem;
+      border-top: 1px solid rgba(255, 255, 255, .06);
+      padding-top: .4rem;
+    }
+
+    #historySection h4 {
+      margin: 0 0 .3rem;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    .history-item {
+      padding: .35rem .4rem;
+      margin-bottom: .25rem;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid rgba(255, 255, 255, .05);
+      font-size: .78rem;
+      color: #bbb;
+    }
+
+    .history-item .hi-status {
+      font-weight: 600;
+      color: #e8e8e8;
+    }
+
+    .history-item .hi-time {
+      color: #666;
+      font-size: .72rem;
+    }
+
+    .history-empty {
+      font-size: .78rem;
+      color: #555;
+      font-style: italic;
+    }
+
+    /* ---------- Toast ---------- */
     .toast {
       position: fixed;
       bottom: 80px;
       left: 50%;
-      transform: translateX(-50%);
-      background: #161616;
-      color: #eee;
-      padding: .5rem .75rem;
-      border: 1px solid #333;
+      transform: translateX(-50%) translateY(10px);
+      background: rgba(22, 22, 22, .95);
+      color: #e8e8e8;
+      padding: .45rem .7rem;
+      border: 1px solid rgba(255, 255, 255, .1);
       border-radius: 10px;
       z-index: 99;
-      display: none;
+      font-size: .82rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s, transform .2s;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
 
     .toast.show {
-      display: block;
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
     }
 
     .badge {
       background: #000;
-      color: #fff;
+      color: #ff5555;
       padding: .1rem .4rem;
       border-radius: 6px;
       border: 1px solid #444;
-      font-size: .75rem;
+      font-size: .72rem;
+      font-weight: 600;
     }
 
-    .close-btn {
-      position: absolute;
-      top: .4rem;
-      right: .6rem;
-      background: none;
-      border: none;
-      color: #999;
-      font-size: 1.4rem;
-      cursor: pointer;
-      padding: .2rem .4rem;
-      line-height: 1;
-    }
+    /* ---------- Responsive ---------- */
+    @media (max-width: 420px) {
+      #topbar {
+        padding: .3rem .35rem;
+      }
 
-    .close-btn:hover {
-      color: #fff;
-    }
+      select,
+      button {
+        font-size: .75rem;
+        padding: .35rem .4rem;
+      }
 
-    #panel {
-      position: relative;
+      .btn {
+        font-size: .75rem;
+        padding: .4rem .5rem;
+      }
     }
   </style>
 </head>
@@ -191,21 +340,26 @@
 <body>
   <div id="app">
     <div id="topbar">
-      <button id="locateBtn">Locate Me</button>
-      <select id="userSelect">
-        <option value="">Select User</option>
-        <option>Brent</option>
-        <option>Paris</option>
-      </select>
-      <select id="viewSelect" title="Filter view">
-        <option value="all">All Pins</option>
-        <option value="mine">My Pins</option>
-        <option value="today">Today</option>
-        <option value="week">This Week</option>
-      </select>
-      <button id="refreshBtn">Refresh</button>
-      <button id="dropBtn" class="primary">Drop Pin @ GPS</button>
-      <label class="pill"><input type="checkbox" id="crumbToggle" /> Record Route</label>
+      <div class="row-1">
+        <select id="userSelect">
+          <option value="">👤 User</option>
+          <option>Brent</option>
+          <option>Paris</option>
+        </select>
+        <select id="viewSelect" title="Filter view">
+          <option value="all">All Pins</option>
+          <option value="mine">My Pins</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+        </select>
+        <span id="pinCount" class="pin-count"></span>
+        <button id="refreshBtn" title="Refresh">↻</button>
+        <button id="locateBtn" title="Center on me">◎</button>
+      </div>
+      <div class="row-2">
+        <button id="dropBtn" class="primary">📍 Drop Pin @ GPS</button>
+        <label class="pill"><input type="checkbox" id="crumbToggle" /> Route</label>
+      </div>
     </div>
     <div id="map"></div>
 
@@ -215,7 +369,7 @@
         <h3 id="p_addr">Address</h3>
         <span id="p_badge" class="badge" style="display:none;">DND</span>
       </div>
-      <div class="row" id="p_meta"></div>
+      <div class="meta" id="p_meta"></div>
 
       <div class="btns" id="topBtns">
         <button class="btn big yellow" data-top="Damage">Damage</button>
@@ -228,6 +382,11 @@
 
       <div class="btns" id="subBtns"></div>
       <textarea id="note" class="note" rows="2" placeholder="Optional short note (50 chars max)"></textarea>
+
+      <div id="historySection" style="display:none;">
+        <h4>History</h4>
+        <div id="historyList"></div>
+      </div>
     </div>
   </div>
 
