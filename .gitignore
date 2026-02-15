@@ -18,11 +18,16 @@ dist/
 build/
 coverage/
 
-# Environment / secrets
+# Environment / secrets — NEVER commit credentials
 config.json
 .env
+.env.*
 app.config.js
 *.local
+*.secret
+*oauth*.json
+*credentials*.json
+gcp-oauth.keys.json
 
 # Editors
 .vscode/
