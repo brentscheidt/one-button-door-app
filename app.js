@@ -10,8 +10,9 @@
     SCRIPT_BASE: "https://script.google.com/macros/s/AKfycbwoIvtGI0Oh-sSkFNGA_u6ARStHbhOEb01qLh6DGX0C1-lPTDg5Vz4thkaFB_n2eDcz4w/exec",
     GOOGLE_CLIENT_ID: "251697766355-o504ecjmj2laaa3gs599ejp4asjbe2es.apps.googleusercontent.com",
     REFRESH_SEC: 30,
-    BREADCRUMB_SEC: 60,
-    BREADCRUMB_MIN_DELTA_M: 50,
+    BREADCRUMB_SEC: 15,
+    BREADCRUMB_MIN_DELTA_M: 15,
+    ROUTE_MAX_GAP_M: 300,
     MAX_NOTE_LEN: 50,
   };
 
