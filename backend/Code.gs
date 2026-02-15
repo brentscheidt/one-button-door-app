@@ -215,6 +215,7 @@ function cleanSub_(s){return titleCase_((s||"").toString().trim().slice(0,60));}
 function rankForStatus_(s){s=(s||"").toLowerCase();if(s==="customer")return 5;if(s==="inspection")return 4;if(s==="conversation")return 3;if(s==="damage"||s==="quick knock")return 2;if(s==="dead")return 1;return 0;}
 function ensurePinsHeaders_(sh,f){const h=["pin_id","address_norm","lat","lng","latest_status","latest_substatus","latest_note","latest_ts","latest_user","value_rank","is_dnd","created_ts","created_by","last_updated_ts"];if(!f||h.some((x,i)=>f[i]!==h[i]))sh.getRange(1,1,1,h.length).setValues([h]);return h;}
 function getRows_(sh){const lr=sh.getLastRow(),lc=sh.getLastColumn();if(lr===0)return [[]];return sh.getRange(1,1,lr,lc).getValues();}
+function colIndex_(headers,names){const m={};names.forEach(n=>{const i=headers.indexOf(n);m[n]=i>=0?i:headers.indexOf(n.replace(/_/g," "));});return m;}
 function json_(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}
 function error_(e){return ContentService.createTextOutput(JSON.stringify({ok:false,error:String(e.stack||e)})).setMimeType(ContentService.MimeType.JSON);}
 function uuid_(){return"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==="x"?r:(r&0x3|0x8);return v.toString(16);});}
