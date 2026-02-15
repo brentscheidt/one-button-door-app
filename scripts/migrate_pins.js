@@ -6,7 +6,7 @@
  * Usage: node migrate_pins.js
  */
 
-const SCRIPT_BASE = "https://script.google.com/macros/s/AKfycbwoIvtGI0Oh-sSkFNGA_u6ARStHbhOEb01qLh6DGX0C1-lPTDg5Vz4thkaFB_n2eDcz4w/exec";
+const SCRIPT_BASE = "https://script.google.com/macros/s/AKfycbz3GOYhhmOL7zG1YailUatYyBHAK3jmTGMaafOGmmeDSgWgmIrW52pXZek2Ffeq0IPrfA/exec";
 const MAPS_KEY = "AIzaSyAzfIev2fEMKIa0bDe7FWwqb7lOrhVLstM";
 
 const PINS = [

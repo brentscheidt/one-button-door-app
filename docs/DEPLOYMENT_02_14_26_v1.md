@@ -1,6 +1,6 @@
 # BSRG DoorKnock — Deployment Record
 **Date:** 02_14_26
-**Version:** v0.5.0
+**Version:** v0.8.0
 **Deployed by:** Claude (Antigravity) + Brent
 
 ---
@@ -47,14 +47,14 @@
 
 | Field | Value |
 |-------|-------|
-| **Project Name** | BSRG DoorKnock Backend v0.5.0 |
+| **Project Name** | Platinum DoorKnock Backend v0.8.0 |
 | **Script Editor** | https://script.google.com/u/0/home/projects/1R8UYypAXX-iMrvq8wjK_IN0pstw3ZX1_oBi (linked from sheet Extensions menu) |
 | **Deployment Type** | Web app |
-| **Deployment Version** | Version 1 — v0.5.0 Production |
+| **Deployment Version** | Version 10 — v0.8.0 (Stable) |
 | **Execute as** | Me (brent@tscstudios.com) |
 | **Who has access** | Anyone |
-| **Web App URL** | `https://script.google.com/macros/s/AKfycbwoIvtGI0Oh-sSkFNGA_u6ARStHbhOEb01qLh6DGX0C1-lPTDg5Vz4thkaFB_n2eDcz4w/exec` |
-| **Deployment ID** | `AKfycbwoIvtGI0Oh-sSkFNGA_u6ARStHbhOEb01qLh6DGX0C1-lPTDg5Vz4thkaFB_n2eDcz4w` |
+| **Web App URL** | `https://script.google.com/macros/s/AKfycbz3GOYhhmOL7zG1YailUatYyBHAK3jmTGMaafOGmmeDSgWgmIrW52pXZek2Ffeq0IPrfA/exec` |
+| **Deployment ID** | `AKfycbz3GOYhhmOL7zG1YailUatYyBHAK3jmTGMaafOGmmeDSgWgmIrW52pXZek2Ffeq0IPrfA` |
 
 ### Endpoints
 - `GET ?mode=getPins` — Returns all pins from the Pins tab

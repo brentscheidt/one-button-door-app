@@ -7,7 +7,7 @@
 
 (() => {
   const CONFIG = {
-    SCRIPT_BASE: "https://script.google.com/macros/s/AKfycbwoIvtGI0Oh-sSkFNGA_u6ARStHbhOEb01qLh6DGX0C1-lPTDg5Vz4thkaFB_n2eDcz4w/exec",
+    SCRIPT_BASE: "https://script.google.com/macros/s/AKfycbz3GOYhhmOL7zG1YailUatYyBHAK3jmTGMaafOGmmeDSgWgmIrW52pXZek2Ffeq0IPrfA/exec",
     GOOGLE_CLIENT_ID: "251697766355-o504ecjmj2laaa3gs599ejp4asjbe2es.apps.googleusercontent.com",
     REFRESH_SEC: 30,
     BREADCRUMB_SEC: 15,
@@ -33,6 +33,8 @@
   let sessionKnockCount = 0;
   let sessionDisplayTimer = null;
   let currentFilter = localStorage.getItem("plat_filter") || "all";
+  let routePolylines = [];
+  let showingRoutes = false;
 
   // Auth state
   let authUser = JSON.parse(localStorage.getItem("plat_auth") || "null");
@@ -74,9 +76,9 @@
     d("closePanel").addEventListener("click", closePanel_);
     d("saveBtn").addEventListener("click", saveCurrentPin_);
     d("dragonBtn").addEventListener("click", toggleDragonMenu_);
-    d("dmRoutes").addEventListener("click", () => { closeDragonMenu_(); toast("Route display coming soon!"); });
+    d("dmRoutes").addEventListener("click", toggleRoutes_);
     d("dmStats").addEventListener("click", () => { closeDragonMenu_(); showSessionStats_(); });
-    d("dmSettings").addEventListener("click", () => { closeDragonMenu_(); toast("Settings coming soon!"); });
+    d("dmSettings").addEventListener("click", handleSettings_);
     d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by BSRG 🐉"); });
     d("viewSelect").addEventListener("change", () => {
       currentFilter = d("viewSelect").value;
@@ -496,6 +498,7 @@
       const pos = await getPosition_();
       const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       map.setCenter(latlng);
+      map.panTo(latlng);
       const addr = await reverseGeocode_(latlng);
 
       // Create a temporary local pin (pin_id empty → backend will upsert & assign/keep)
@@ -538,6 +541,7 @@
 
     try {
       const latlng = { lat, lng };
+      map.panTo(latlng);
       const addr = await reverseGeocode_(latlng);
 
       const temp = {
@@ -780,6 +784,93 @@
         }),
       });
     } catch (e) { console.warn(e); }
+  }
+
+  /* ---------- Route Display ---------- */
+  function toggleRoutes_() {
+    closeDragonMenu_();
+    if (showingRoutes) {
+      routePolylines.forEach(p => p.setMap(null));
+      routePolylines = [];
+      showingRoutes = false;
+      d("dmRoutes").textContent = "View Routes";
+      toast("Routes hidden");
+    } else {
+      showingRoutes = true;
+      d("dmRoutes").textContent = "Hide Routes";
+      fetchAndDrawRoutes_();
+    }
+  }
+
+  async function fetchAndDrawRoutes_() {
+    toast("Fetching today's routes...");
+    try {
+      const params = new URLSearchParams({ mode: "getBreadcrumbs" });
+      const res = await fetch(`${CONFIG.SCRIPT_BASE}?${params}`);
+      const data = await res.json();
+
+      // Filter: Today only (local time)
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const relevant = data.filter(r => r.ts && new Date(r.ts).getTime() >= startOfDay);
+
+      if (relevant.length === 0) {
+        toast("No routes found for today");
+        // Keep showingRoutes=true so user knows they are 'on' but empty? 
+        // Or toggle off? Let's leave it on to avoid confusion.
+        return;
+      }
+
+      // Group by session
+      const sessions = {};
+      relevant.forEach(r => {
+        if (!sessions[r.session_id]) sessions[r.session_id] = [];
+        sessions[r.session_id].push(r);
+      });
+
+      // Draw
+      Object.entries(sessions).forEach(([sid, points]) => {
+        points.sort((a, b) => (a.ts || "").localeCompare(b.ts || ""));
+        const path = points.map(p => ({ lat: p.lat, lng: p.lng }));
+
+        // Color based on user
+        const u = (points[0].user || "").toLowerCase();
+        let color = "#999999";
+        if (u.includes("brent")) color = "#8a2be2"; // BlueViolet
+        else if (u.includes("paris")) color = "#ff00ff"; // Magenta
+        else color = "#ff8c00"; // DarkOrange (unknown)
+
+        const poly = new google.maps.Polyline({
+          path,
+          geodesic: true,
+          strokeColor: color,
+          strokeOpacity: 0.7,
+          strokeWeight: 4,
+          map,
+        });
+        routePolylines.push(poly);
+      });
+      toast(`Showing ${Object.keys(sessions).length} session(s)`);
+    } catch (e) {
+      console.warn(e);
+      toast("Failed to load routes");
+      // Clean up toggle state since it failed
+      showingRoutes = false;
+      d("dmRoutes").textContent = "View Routes";
+    }
+  }
+
+
+
+  /* ---------- Settings ---------- */
+  function handleSettings_() {
+    closeDragonMenu_();
+    if (confirm("Reset app cache and reload? (Keeps you signed in)")) {
+      const auth = localStorage.getItem("plat_auth");
+      localStorage.clear();
+      if (auth) localStorage.setItem("plat_auth", auth);
+      window.location.reload();
+    }
   }
 
   /* ---------- Utils ---------- */

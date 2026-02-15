@@ -11,10 +11,10 @@
 - ✅ **Backend endpoints** (local only, not yet deployed) — getBreadcrumbs, getRouteSessions for route retrieval.
 - ✅ **Ideas backlog** — `docs/IDEAS_BACKLOG_02_15_26_v1.md` tracks all feature ideas and iterations.
 
-**Known Issues**
-- Backend Code.gs needs manual deployment to Apps Script for route retrieval endpoints.
-- Route display on map not yet built (blocked by backend deployment).
-- Dragon logo + dropdown menu not yet implemented.
+- ✅ **Route display** — visualize today's path with 'View Routes' menu.
+- ✅ **GPS Centering** — auto-center map when dropping pins.
+- ✅ **Menu Features** — 'Settings' adds cache clear; 'View Routes' toggles breadcrumbs.
+- ✅ **Data Migration** — Script `migrate_pins.js` readied for data transfer.
 
 ## v0.7.0 — 02_15_26
 **Google Sign-In + auth improvements**

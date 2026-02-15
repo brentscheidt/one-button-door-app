@@ -1,7 +1,7 @@
 /**
- * Platinum DoorKnock — Apps Script backend + frontend host
+ * Platinum DoorKnock - Apps Script backend + frontend host
  * Version: v0.8.0 (02_15_26)
- * Deployment: HtmlService — single URL, Google auth built-in
+ * Deployment: HtmlService - single URL, Google auth built-in
  * Sheet: "Platinum DoorKnock - Production"
  * Tabs: Pins / Logs / Breadcrumbs / Config
  */
@@ -92,7 +92,15 @@ function getPins_() {
     ts: r[idx.latest_ts] ? String(r[idx.latest_ts]) : "",
     user: r[idx.latest_user] || "",
     is_dnd: toBool_(r[idx.is_dnd]),
-  })).filter(p => p.address);
+  })).filter(p => {
+    // Basic validity checks
+    if (!p.address || !p.pin_id) return false;
+    if (!p.lat || !p.lng) return false;
+    // Filter out potential garbage/header rows
+    const pid = p.pin_id.toLowerCase();
+    if (pid === "pin_id" || pid === "address_norm" || pid === "lat" || pid === "lng") return false;
+    return true;
+  });
   return out;
 }
 
