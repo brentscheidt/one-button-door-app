@@ -244,7 +244,8 @@
 
   function addOrUpdateMarker_(pin) {
     const color = markerColorFor_(pin);
-    const icon = markerIcon_(color);
+    const isOwn = isOwnPin_(pin);
+    const icon = markerIcon_(color, isOwn);
     if (markers.has(pin.pin_id)) {
       const m = markers.get(pin.pin_id);
       m.setPosition({ lat: pin.lat, lng: pin.lng });
@@ -262,26 +263,30 @@
     }
   }
 
-  function markerIcon_(hex) {
+  function markerIcon_(hex, isOwn) {
     return {
       path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
       fillColor: hex,
       fillOpacity: 1,
-      strokeColor: "#111",
-      strokeWeight: 1,
-      scale: 1.2,
+      strokeColor: isOwn ? "#4da3ff" : "#e060a0",  // blue = mine, pink = theirs
+      strokeWeight: isOwn ? 2.5 : 1.5,
+      scale: isOwn ? 1.35 : 1.1,
       anchor: new google.maps.Point(12, 24),
     };
   }
 
+  function isOwnPin_(pin) {
+    const me = getUser_().toLowerCase();
+    if (!me) return false;
+    return (pin.user || "").toLowerCase().includes(me);
+  }
+
   function markerColorFor_(pin) {
     if (pin.is_dnd || (pin.status || "").toLowerCase() === "dead") return "#000000"; // black
-    const s = (pin.status || "").toLowerCase();
-    if (s === "customer") return "#1e7e34";   // green
-    if (s === "inspection") return "#b05b00"; // orange
-    if (s === "conversation") return "#0b5ed7"; // blue
-    if (s === "damage" || s === "quick knock") return "#8a6d1a"; // yellow-ish
-    return "#666666";
+    const u = (pin.user || "").toLowerCase();
+    if (u.includes("brent")) return "#2d8cf0";   // blue
+    if (u.includes("paris")) return "#d946a8";   // magenta/pink
+    return "#888888";                              // unknown user — gray
   }
 
   /* ---------- Panel & logging ---------- */
