@@ -1,8 +1,8 @@
-/* BSRG DoorKnock — v0.5.0
+/* BSRG DoorKnock — v0.5.1
  * Frontend map + fast logging
  * Date: 02_14_26
  * Decisions: 30s polling; BLACK=DEAD; address-anchored pins; 1 pending offline log
- * Changes: New DoorKnockLogger GCP project; fresh Apps Script deployment
+ * Changes: View filter (All/Mine/Today/Week); close panel; UX polish
  */
 
 (() => {
@@ -23,6 +23,7 @@
   let lastFetchHash = "";
   let sessionId = randId_();
   let crumbTimer = null;
+  let currentFilter = localStorage.getItem("bsrg_filter") || "all";
 
   // DOM
   const d = (id) => document.getElementById(id);
@@ -55,9 +56,19 @@
     d("refreshBtn").addEventListener("click", fetchPins_);
     d("dropBtn").addEventListener("click", dropPinAtGps_);
     d("crumbToggle").addEventListener("change", toggleCrumbs_);
+    d("closePanel").addEventListener("click", closePanel_);
     d("userSelect").addEventListener("change", () => {
       localStorage.setItem("bsrg_user", d("userSelect").value || "");
+      applyViewFilter_(); // re-filter when user changes
     });
+    d("viewSelect").addEventListener("change", () => {
+      currentFilter = d("viewSelect").value;
+      localStorage.setItem("bsrg_filter", currentFilter);
+      applyViewFilter_();
+    });
+
+    // Tap map to close panel
+    map.addListener("click", closePanel_);
 
     // Fast log buttons → show suboptions
     Array.from(d("topBtns").querySelectorAll("[data-top]")).forEach(btn => {
@@ -72,9 +83,10 @@
       }
     });
 
-    // Restore user
+    // Restore user + filter
     const savedUser = localStorage.getItem("bsrg_user") || "";
     if (savedUser) d("userSelect").value = savedUser;
+    d("viewSelect").value = currentFilter;
 
     locateMe_();       // center on load (manual re-center thereafter)
     await fetchPins_();
@@ -164,6 +176,11 @@
     d("note").value = "";
     d("subBtns").innerHTML = "";
     d("panel").classList.add("open");
+  }
+
+  function closePanel_() {
+    d("panel").classList.remove("open");
+    selectedPin = null;
   }
 
   function showSubOptions_(top) {
@@ -302,6 +319,8 @@
         addOrUpdateMarker_(p);
       });
 
+      applyViewFilter_(); // respect active filter
+
       // Retry pending log if exists
       const pending = localStorage.getItem("bsrg_pending_log");
       if (pending) {
@@ -319,6 +338,31 @@
     } catch (e) {
       console.warn(e);
       toast("Fetch failed");
+    }
+  }
+
+  /* ---------- View filter ---------- */
+  function applyViewFilter_() {
+    const user = d("userSelect").value || "";
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const weekStart = todayStart - 6 * 86400000; // 7-day window
+
+    for (const [id, pin] of pinsIndex.entries()) {
+      const m = markers.get(id);
+      if (!m) continue;
+
+      let visible = true;
+      if (currentFilter === "mine") {
+        visible = user && (pin.user || "").toLowerCase() === user.toLowerCase();
+      } else if (currentFilter === "today") {
+        visible = pin.ts && new Date(pin.ts).getTime() >= todayStart;
+      } else if (currentFilter === "week") {
+        visible = pin.ts && new Date(pin.ts).getTime() >= weekStart;
+      }
+      // "all" → always visible
+
+      m.setVisible(visible);
     }
   }
 

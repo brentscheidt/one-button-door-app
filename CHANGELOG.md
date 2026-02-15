@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.1 — 02_14_26
+**View filter + UX polish**
+- ✅ Wired up View Filter dropdown: All Pins / My Pins / Today / This Week (persists across reloads).
+- ✅ Added close button (✕) to slide-up panel.
+- ✅ Tap map to dismiss panel.
+- ✅ Re-filters pins when user selection changes.
+- ✅ Filter state saved to localStorage.
+
 ## v0.5.0 — 02_14_26
 **New GCP project + fresh production deployment**
 - ✅ Created dedicated `DoorKnockLogger` Google Cloud project (ID: `doorknocklogger`).
