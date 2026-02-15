@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-  <title>Platinum DoorKnock — v0.7.0</title>
+  <title>Platinum DoorKnock — v0.8.0</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -162,8 +162,8 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 20;
-      width: 80px;
-      height: 80px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 35%, #2a2a2e 0%, #161618 70%, #0e0e10 100%);
       border: 2.5px solid;
@@ -185,8 +185,8 @@
     }
 
     #dropBtn svg {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       stroke: #c8b48c;
       stroke-width: 2;
       fill: none;
@@ -422,6 +422,40 @@
       resize: none;
     }
 
+    /* ---------- Save button ---------- */
+    #saveBtn {
+      width: 100%;
+      padding: .7rem 1rem;
+      margin-top: .4rem;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1f6feb 0%, #1558c0 100%);
+      border: 1.5px solid rgba(31, 111, 235, .5);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      transition: transform .12s, box-shadow .15s, opacity .15s;
+      box-shadow: 0 4px 16px rgba(31, 111, 235, .25);
+    }
+
+    #saveBtn:active {
+      transform: scale(.97);
+      box-shadow: 0 2px 8px rgba(31, 111, 235, .3);
+    }
+
+    #saveBtn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    #saveBtn.saved {
+      background: linear-gradient(135deg, #1e7e34 0%, #165f27 100%);
+      border-color: rgba(30, 126, 52, .5);
+      box-shadow: 0 4px 16px rgba(30, 126, 52, .25);
+    }
+
     .note:focus {
       border-color: rgba(31, 111, 235, .4);
       outline: none;
@@ -588,6 +622,7 @@
 
       <div class="btns" id="subBtns"></div>
       <textarea id="note" class="note" rows="2" placeholder="Optional short note (50 chars max)"></textarea>
+      <button id="saveBtn" disabled>💾 SAVE</button>
 
       <div id="historySection" style="display:none;">
         <h4>History</h4>

@@ -1,8 +1,8 @@
-/* Platinum DoorKnock — v0.7.0
+/* Platinum DoorKnock — v0.8.0
  * Frontend map + fast logging
- * Date: 02_14_26
+ * Date: 02_15_26
  * Decisions: 30s polling; BLACK=DEAD; address-anchored pins; 1 pending offline log
- * Changes: Google Sign-In auth; profile avatar; bigger FAB + log buttons
+ * Changes: Save button; bigger FAB; status tracking
  */
 
 (() => {
@@ -20,6 +20,8 @@
   let markers = new Map();
   let pinsIndex = new Map();
   let selectedPin = null;
+  let selectedStatus = "";
+  let selectedSub = "";
   let lastFetchHash = "";
   let sessionId = randId_();
   let crumbTimer = null;
@@ -62,6 +64,7 @@
     d("dropBtn").addEventListener("click", dropPinAtGps_);
     d("crumbToggle").addEventListener("change", toggleCrumbs_);
     d("closePanel").addEventListener("click", closePanel_);
+    d("saveBtn").addEventListener("click", saveCurrentPin_);
     d("viewSelect").addEventListener("change", () => {
       currentFilter = d("viewSelect").value;
       localStorage.setItem("plat_filter", currentFilter);
@@ -303,6 +306,12 @@
     d("subBtns").innerHTML = "";
     d("panel").classList.add("open");
 
+    // Reset status selections
+    selectedStatus = "";
+    selectedSub = "";
+    updateSaveBtn_();
+    Array.from(d("topBtns").querySelectorAll("[data-top]")).forEach(btn => btn.style.outline = "none");
+
     // Fetch history async
     fetchHistory_(pin);
   }
@@ -346,6 +355,15 @@
       toast("Select or drop a pin first");
       return;
     }
+    selectedStatus = top;
+    selectedSub = "";
+    updateSaveBtn_();
+
+    // Highlight active top button
+    Array.from(d("topBtns").querySelectorAll("[data-top]")).forEach(btn => {
+      btn.style.outline = btn.getAttribute("data-top") === top ? "2px solid #fff" : "none";
+    });
+
     const list = suboptionsFor_(top);
     const wrap = d("subBtns");
     wrap.innerHTML = "";
@@ -353,7 +371,13 @@
       const b = document.createElement("button");
       b.className = "btn";
       b.textContent = label;
-      b.addEventListener("click", () => submitLog_(top, label));
+      b.addEventListener("click", () => {
+        selectedSub = label;
+        updateSaveBtn_();
+        // Highlight active sub button
+        Array.from(wrap.children).forEach(c => c.style.outline = "none");
+        b.style.outline = "2px solid #fff";
+      });
       wrap.appendChild(b);
     });
   }
@@ -414,6 +438,34 @@
       // One pending offline log
       localStorage.setItem("plat_pending_log", JSON.stringify(payload));
       toast("Offline. Will retry…");
+    }
+  }
+
+  /* ---------- Save button ---------- */
+  function saveCurrentPin_() {
+    if (!selectedPin) { toast("No pin selected"); return; }
+    const status = selectedStatus || "Damage";
+    const sub = selectedSub || "Scouted Only";
+    submitLog_(status, sub);
+    // Visual feedback
+    const btn = d("saveBtn");
+    btn.textContent = "✅ SAVED";
+    btn.classList.add("saved");
+    setTimeout(() => {
+      btn.textContent = "💾 SAVE";
+      btn.classList.remove("saved");
+    }, 2000);
+  }
+
+  function updateSaveBtn_() {
+    const btn = d("saveBtn");
+    btn.disabled = !selectedPin;
+    if (selectedStatus && selectedSub) {
+      btn.textContent = `💾 SAVE — ${selectedStatus} / ${selectedSub}`;
+    } else if (selectedStatus) {
+      btn.textContent = `💾 SAVE — ${selectedStatus}`;
+    } else {
+      btn.textContent = "💾 SAVE";
     }
   }
 
