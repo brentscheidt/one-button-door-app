@@ -12,6 +12,8 @@
     REFRESH_SEC: 30,
     BREADCRUMB_SEC: 15,
     BREADCRUMB_MIN_DELTA_M: 15,
+    LIVE_TRACK_STALE_MS: 15000,
+    MAX_SESSION_BREADCRUMBS: 300,
     ROUTE_MAX_GAP_M: 300,
     MAX_NOTE_LEN: 50,
   };
@@ -35,6 +37,12 @@
   let currentFilter = localStorage.getItem("plat_filter") || "all";
   let routePolylines = [];
   let showingRoutes = false;
+  let liveWatchId = null;
+  let livePos = null;
+  let breadcrumbMarkers = [];
+  let breadcrumbPath = [];
+  let breadcrumbPolyline = null;
+  let breadcrumbInfoWindow = null;
 
   // Auth state
   let authUser = JSON.parse(localStorage.getItem("plat_auth") || "null");
@@ -67,6 +75,7 @@
       gestureHandling: "greedy",
       styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }], // reduce clutter
     });
+    breadcrumbInfoWindow = new google.maps.InfoWindow();
 
     d("locateBtn").addEventListener("click", locateMe_);
     d("refreshBtn").addEventListener("click", fetchPins_);
@@ -138,7 +147,7 @@
     renderAuthUI_();
     initGoogleSignIn_();
 
-    locateMe_();
+    await locateMe_();
     await fetchPins_();
     setInterval(fetchPins_, CONFIG.REFRESH_SEC * 1000);
   }
@@ -234,29 +243,141 @@
 
   /* ---------- Map helpers ---------- */
   async function locateMe_() {
+    startLiveTracking_();
     try {
-      const pos = await getPosition_();
-      const latlng = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      const point = await getBestPosition_();
+      const latlng = { lat: point.lat, lng: point.lng };
       map.setCenter(latlng);
-      if (!meMarker) {
-        meMarker = new google.maps.Marker({
-          map,
-          position: latlng,
-          zIndex: 9999,
-          icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 6,
-            fillColor: "#1f6feb",
-            fillOpacity: 1,
-            strokeColor: "#fff",
-            strokeWeight: 2,
-          },
-          title: "You",
-        });
-      } else meMarker.setPosition(latlng);
+      map.panTo(latlng);
     } catch (e) {
       console.warn(e);
       toast("Location unavailable");
+    }
+  }
+
+  function startLiveTracking_() {
+    if (liveWatchId !== null || !navigator.geolocation) return;
+    liveWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const point = normalizePosition_(pos);
+        updateLiveMarker_(point);
+      },
+      (err) => {
+        console.warn("Live location tracking failed", err);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+
+  function stopLiveTracking_() {
+    if (liveWatchId === null || !navigator.geolocation) return;
+    navigator.geolocation.clearWatch(liveWatchId);
+    liveWatchId = null;
+  }
+
+  function normalizePosition_(pos) {
+    return {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracy_m: pos.coords.accuracy || null,
+      speed_mps: typeof pos.coords.speed === "number" ? pos.coords.speed : null,
+      ts: Date.now(),
+    };
+  }
+
+  function updateLiveMarker_(point) {
+    livePos = point;
+    const latlng = { lat: point.lat, lng: point.lng };
+    if (!meMarker) {
+      meMarker = new google.maps.Marker({
+        map,
+        position: latlng,
+        zIndex: 9999,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 6,
+          fillColor: "#1f6feb",
+          fillOpacity: 1,
+          strokeColor: "#fff",
+          strokeWeight: 2,
+        },
+        title: "You (live)",
+      });
+      return;
+    }
+    meMarker.setPosition(latlng);
+  }
+
+  async function getBestPosition_() {
+    const now = Date.now();
+    if (livePos && (now - livePos.ts) <= CONFIG.LIVE_TRACK_STALE_MS) return livePos;
+    const pos = await getPosition_();
+    const point = normalizePosition_(pos);
+    updateLiveMarker_(point);
+    return point;
+  }
+
+  function clearBreadcrumbTrail_() {
+    breadcrumbMarkers.forEach((m) => m.setMap(null));
+    breadcrumbMarkers = [];
+    breadcrumbPath = [];
+    if (breadcrumbPolyline) {
+      breadcrumbPolyline.setMap(null);
+      breadcrumbPolyline = null;
+    }
+    if (breadcrumbInfoWindow) breadcrumbInfoWindow.close();
+  }
+
+  function addBreadcrumbMarker_(lat, lng, tsIso) {
+    const visited = new Date(tsIso || Date.now());
+    const latlng = { lat, lng };
+    breadcrumbPath.push(latlng);
+    if (!breadcrumbPolyline) {
+      breadcrumbPolyline = new google.maps.Polyline({
+        path: breadcrumbPath,
+        geodesic: true,
+        strokeColor: "#39a6ff",
+        strokeOpacity: 0.85,
+        strokeWeight: 3,
+        map,
+      });
+    } else {
+      breadcrumbPolyline.setPath(breadcrumbPath);
+    }
+
+    const marker = new google.maps.Marker({
+      map,
+      position: latlng,
+      zIndex: 20,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 3.5,
+        fillColor: "#39a6ff",
+        fillOpacity: 0.95,
+        strokeColor: "#ffffff",
+        strokeWeight: 1,
+      },
+      title: `Visited ${visited.toLocaleString()}`,
+    });
+
+    const openInfo = () => {
+      if (!breadcrumbInfoWindow) return;
+      breadcrumbInfoWindow.setContent(`<div style="font-size:12px;font-weight:600;">Visited: ${esc_(visited.toLocaleString())}</div>`);
+      breadcrumbInfoWindow.open({ map, anchor: marker });
+    };
+
+    marker.addListener("mouseover", openInfo);
+    marker.addListener("click", openInfo);
+    marker.addListener("mouseout", () => {
+      if (breadcrumbInfoWindow) breadcrumbInfoWindow.close();
+    });
+
+    breadcrumbMarkers.push(marker);
+    if (breadcrumbMarkers.length > CONFIG.MAX_SESSION_BREADCRUMBS) {
+      const old = breadcrumbMarkers.shift();
+      if (old) old.setMap(null);
+      breadcrumbPath.shift();
+      if (breadcrumbPolyline) breadcrumbPolyline.setPath(breadcrumbPath);
     }
   }
 
@@ -687,10 +808,12 @@
   function toggleSession_() {
     if (sessionActive) {
       // Stop session
+      if (!sessionPaused) sessionElapsedMs = Date.now() - sessionStartMs;
       sessionActive = false;
       sessionPaused = false;
       clearInterval(crumbTimer); crumbTimer = null;
       clearInterval(sessionDisplayTimer); sessionDisplayTimer = null;
+      stopLiveTracking_();
       d("sessionToggle").classList.remove("on");
       d("sessionToggle").textContent = "Session";
       d("sessionBar").classList.remove("active");
@@ -706,6 +829,9 @@
       sessionStartMs = Date.now();
       sessionElapsedMs = 0;
       sessionKnockCount = 0;
+      localStorage.removeItem("plat_last_crumb");
+      clearBreadcrumbTrail_();
+      startLiveTracking_();
       crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
       sessionDisplayTimer = setInterval(updateSessionUI_, 1000);
       d("sessionToggle").classList.add("on");
@@ -727,6 +853,7 @@
       // Resume
       sessionPaused = false;
       sessionStartMs = Date.now() - sessionElapsedMs;
+      startLiveTracking_();
       crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
       sessionDisplayTimer = setInterval(updateSessionUI_, 1000);
       d("sessionPause").textContent = "⏸";
@@ -768,8 +895,9 @@
     try {
       const user = getUser_();
       if (!user) return;
-      const pos = await getPosition_();
-      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      const point = await getBestPosition_();
+      const lat = point.lat, lng = point.lng;
+      const crumbTs = new Date(point.ts || Date.now()).toISOString();
       const last = JSON.parse(localStorage.getItem("plat_last_crumb") || "null");
       if (last && haversineM_(last.lat, last.lng, lat, lng) < CONFIG.BREADCRUMB_MIN_DELTA_M) return;
 
@@ -780,9 +908,12 @@
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           user, session_id: sessionId, lat, lng,
-          speed_kmh: null, accuracy_m: pos.coords.accuracy || null
+          speed_kmh: point.speed_mps == null ? null : +(point.speed_mps * 3.6).toFixed(1),
+          accuracy_m: point.accuracy_m,
+          ts: crumbTs,
         }),
       });
+      addBreadcrumbMarker_(lat, lng, crumbTs);
     } catch (e) { console.warn(e); }
   }
 
