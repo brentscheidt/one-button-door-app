@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.1 — 02_16_26
+**Session naming + independent session archive**
+- ✅ **End-session naming prompt** — when ending a session, user can name it; if blank/canceled, it auto-saves with date/time label.
+- ✅ **Independent session saves** — each session remains isolated by unique `session_id` and stores its own local summary.
+- ✅ **Session archive metadata** — saved in localStorage (`plat_session_archive` + `plat_session_labels`) with start/end, duration, knocks, and breadcrumb count.
+
 ## v0.8.0 — 02_15_26
 **Save button + Session timer + Route tuning**
 - ✅ **Save button** — prominent 💾 SAVE button in pin panel. No more lost data from forgetting sub-options.
@@ -100,4 +106,3 @@
 - ✅ Added `.github/copilot-instructions.md` with architecture, API contracts, schema invariants, and deployment guidance.
 - ✅ Added a Node smoke-test (`scripts/smoke-test.js`) and `package.json` with `npm run smoke-test` to validate GET/POST behavior against a deployed Apps Script endpoint.
 - ✅ README updated with quick dev/test instructions and clasp recommendation for backend editing.
-

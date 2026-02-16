@@ -27,6 +27,7 @@
   let selectedSub = "";
   let lastFetchHash = "";
   let sessionId = randId_();
+  let sessionLabel = "";
   let crumbTimer = null;
   let sessionActive = false;
   let sessionPaused = false;
@@ -43,6 +44,8 @@
   let breadcrumbPath = [];
   let breadcrumbPolyline = null;
   let breadcrumbInfoWindow = null;
+  const SESSION_LABELS_KEY = "plat_session_labels";
+  const SESSION_ARCHIVE_KEY = "plat_session_archive";
 
   // Auth state
   let authUser = JSON.parse(localStorage.getItem("plat_auth") || "null");
@@ -808,6 +811,7 @@
   function toggleSession_() {
     if (sessionActive) {
       // Stop session
+      const endedAtMs = Date.now();
       if (!sessionPaused) sessionElapsedMs = Date.now() - sessionStartMs;
       sessionActive = false;
       sessionPaused = false;
@@ -820,12 +824,14 @@
       d("sessionTimer").classList.remove("active");
       d("sessionPause").style.display = "none";
       d("sessionKnocks").style.display = "none";
-      toast(`Session ended — ${sessionKnockCount} knocks, ${formatTimer_(sessionElapsedMs)}`);
+      const savedLabel = saveSessionSummary_(endedAtMs);
+      toast(`Session saved: ${savedLabel} — ${sessionKnockCount} knocks, ${formatTimer_(sessionElapsedMs)}`);
     } else {
       // Start session
       sessionActive = true;
       sessionPaused = false;
       sessionId = randId_();
+      sessionLabel = "";
       sessionStartMs = Date.now();
       sessionElapsedMs = 0;
       sessionKnockCount = 0;
@@ -889,6 +895,56 @@
     const s = totalSec % 60;
     if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  function defaultSessionLabel_(ms) {
+    return `Session ${new Date(ms || Date.now()).toLocaleString()}`;
+  }
+
+  function readSessionLabels_() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(SESSION_LABELS_KEY) || "{}");
+      return (parsed && typeof parsed === "object" && !Array.isArray(parsed)) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveSessionLabel_(sid, label) {
+    const labels = readSessionLabels_();
+    labels[sid] = label;
+    localStorage.setItem(SESSION_LABELS_KEY, JSON.stringify(labels));
+  }
+
+  function saveSessionSummary_(endedAtMs) {
+    const fallback = defaultSessionLabel_(sessionStartMs);
+    const input = window.prompt("Save session as (optional)", fallback);
+    const finalLabel = (input || "").trim() || fallback;
+    sessionLabel = finalLabel;
+    saveSessionLabel_(sessionId, finalLabel);
+
+    let archive = [];
+    try {
+      const parsed = JSON.parse(localStorage.getItem(SESSION_ARCHIVE_KEY) || "[]");
+      archive = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      archive = [];
+    }
+
+    const summary = {
+      session_id: sessionId,
+      session_label: finalLabel,
+      user: getUser_(),
+      started_at: new Date(sessionStartMs).toISOString(),
+      ended_at: new Date(endedAtMs).toISOString(),
+      elapsed_ms: sessionElapsedMs,
+      knocks: sessionKnockCount,
+      breadcrumb_points: breadcrumbPath.length,
+    };
+    archive = archive.filter((s) => s.session_id !== sessionId);
+    archive.unshift(summary);
+    localStorage.setItem(SESSION_ARCHIVE_KEY, JSON.stringify(archive.slice(0, 300)));
+    return finalLabel;
   }
 
   async function sendCrumb_() {
