@@ -14,7 +14,7 @@
 - ✅ **Route display** — visualize today's path with 'View Routes' menu.
 - ✅ **GPS Centering** — auto-center map when dropping pins.
 - ✅ **Menu Features** — 'Settings' adds cache clear; 'View Routes' toggles breadcrumbs.
-- ✅ **Data Migration** — Script `migrate_pins.js` readied for data transfer.
+- ✅ **Data Migration** — Script `migrate_pins.js` executed; Paris's history imported.
 
 ## v0.7.0 — 02_15_26
 **Google Sign-In + auth improvements**
