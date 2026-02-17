@@ -1080,7 +1080,7 @@
       d("sessionBar").classList.remove("active");
       d("sessionTimer").classList.remove("active");
       d("sessionPause").style.display = "none";
-      d("sessionKnocks").style.display = "none";
+      d("sessionStats").style.display = "none";
       const savedLabel = saveSessionSummary_(endedAtMs);
       toast(`Session saved: ${savedLabel} — ${sessionKnockCount} knocks, ${sessionConvos} convos`);
     } else {
@@ -1106,7 +1106,8 @@
       d("sessionTimer").classList.add("active");
       d("sessionPause").style.display = "block";
       d("sessionPause").textContent = "⏸";
-      d("sessionKnocks").style.display = "block";
+      d("sessionPause").textContent = "⏸";
+      d("sessionStats").style.display = "flex";
       updateSessionUI_();
       sendCrumb_(); // immediate first breadcrumb
       toast("🔴 Session started — recording route");
@@ -1145,7 +1146,16 @@
     if (!sessionActive) return;
     sessionElapsedMs = Date.now() - sessionStartMs;
     d("sessionTimer").textContent = formatTimer_(sessionElapsedMs);
-    d("sessionKnocks").textContent = `${sessionKnockCount} knock${sessionKnockCount !== 1 ? "s" : ""}`;
+
+    // Update verbose stats
+    d("sKnocks").textContent = `${sessionKnockCount}k`;
+    d("sInsps").textContent = `${sessionInspections}i`;
+    d("sConts").textContent = `${sessionContracts}c`;
+
+    // Colorize if > 0
+    d("sKnocks").style.color = sessionKnockCount > 0 ? "#fff" : "#888";
+    d("sInsps").style.color = sessionInspections > 0 ? "#4da3ff" : "#888";
+    d("sConts").style.color = sessionContracts > 0 ? "#00e5ff" : "#888";
   }
 
   function formatTimer_(ms) {

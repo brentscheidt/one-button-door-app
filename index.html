@@ -938,7 +938,12 @@
       <button id="sessionToggle">Session</button>
       <span id="sessionTimer">0:00</span>
       <button id="sessionPause" title="Pause">⏸</button>
-      <span id="sessionKnocks">0 knocks</span>
+      <div id="sessionStats"
+        style="display:none;gap:8px;font-size:0.75rem;color:#ccc;align-items:center;margin-left:5px;">
+        <span id="sKnocks" title="Knocks">0k</span>
+        <span id="sInsps" title="Inspections">0i</span>
+        <span id="sConts" title="Contracts">0c</span>
+      </div>
     </div>
     <div id="map"></div>
 
