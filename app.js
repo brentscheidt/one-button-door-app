@@ -1148,12 +1148,14 @@
     d("sessionTimer").textContent = formatTimer_(sessionElapsedMs);
 
     // Update verbose stats
-    d("sKnocks").textContent = `${sessionKnockCount}k`;
-    d("sInsps").textContent = `${sessionInspections}i`;
-    d("sConts").textContent = `${sessionContracts}c`;
+    d("sKnocks").textContent = `${sessionKnockCount} Knock`;
+    d("sConvos").textContent = `${sessionConvos} Convo`;
+    d("sInsps").textContent = `${sessionInspections} Insp`;
+    d("sConts").textContent = `${sessionContracts} Cont`;
 
     // Colorize if > 0
     d("sKnocks").style.color = sessionKnockCount > 0 ? "#fff" : "#888";
+    d("sConvos").style.color = sessionConvos > 0 ? "#fff" : "#888";
     d("sInsps").style.color = sessionInspections > 0 ? "#4da3ff" : "#888";
     d("sConts").style.color = sessionContracts > 0 ? "#00e5ff" : "#888";
   }
