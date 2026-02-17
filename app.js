@@ -536,9 +536,7 @@
     // Only show for user's own pins
     delBtn.style.display = isOwnPin_(pin) ? "block" : "none";
     delBtn.onclick = () => {
-      if (confirm("Delete this pin permanently?")) {
-        deletePin_(pin.pin_id);
-      }
+      deletePin_(pin.pin_id);
     };
 
     d("note").value = "";
