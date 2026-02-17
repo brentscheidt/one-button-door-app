@@ -115,7 +115,7 @@
     d("dmRoutes").addEventListener("click", showRouteSelector_);
     d("dmStats").addEventListener("click", () => { closeDragonMenu_(); showSessionStats_(); });
     d("dmSettings").addEventListener("click", handleSettings_);
-    d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by tscstudios 🐉"); });
+    d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by tscstudios"); });
     d("viewSelect").addEventListener("change", () => {
       currentFilter = d("viewSelect").value;
       localStorage.setItem("plat_filter", currentFilter);
@@ -1437,10 +1437,10 @@
     box.style.cssText = "background:#1e1e24;width:85%;max-width:320px;padding:1.5rem;border-radius:16px;border:1px solid #444;text-align:center;";
 
     box.innerHTML = `
-      <h3 style="margin:0 0 1rem;color:#fff;font-size:1.1rem;">Settings</h3>
+      <h3 style="margin:0 0 1rem;color:#fff;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:10px;"><img src="logo.png" style="width:24px;height:24px;filter:invert(1);"> Settings</h3>
       <div style="margin-bottom:1.5rem;color:#ccc;font-size:0.9rem;">
         App Version: v0.8.0<br>
-        Created by: tscstudios 🐉
+        Created by: tscstudios
       </div>
       <button id="resetCacheBtn" style="width:100%;padding:0.8rem;background:#772222;color:#fff;border:none;border-radius:10px;font-weight:600;margin-bottom:0.8rem;">Reset App Cache</button>
       <button id="closeSettingsBtn" style="width:100%;padding:0.8rem;background:#333;color:#fff;border:none;border-radius:10px;font-weight:600;">Close</button>
