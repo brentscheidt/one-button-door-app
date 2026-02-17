@@ -41,6 +41,11 @@
   let sessionContracts = 0;
   let sessionDisplayTimer = null;
   let currentFilter = localStorage.getItem("plat_filter") || "all";
+  // Goals
+  let goalConvos = 15;
+  let goalInsps = 3;
+  let goalConts = 1;
+
   let activeRoutePolys = new Map(); // sessionId -> [polylines]
   let showingRoutes = false;
   let liveWatchId = null;
@@ -1084,34 +1089,89 @@
       const savedLabel = saveSessionSummary_(endedAtMs);
       toast(`Session saved: ${savedLabel} — ${sessionKnockCount} knocks, ${sessionConvos} convos`);
     } else {
-      // Start session
-      sessionActive = true;
-      sessionPaused = false;
-      sessionId = randId_();
-      sessionLabel = "";
-      sessionStartMs = Date.now();
-      sessionElapsedMs = 0;
-      sessionKnockCount = 0;
-      sessionConvos = 0;
-      sessionInspections = 0;
-      sessionContracts = 0;
-      localStorage.removeItem("plat_last_crumb");
-      clearBreadcrumbTrail_();
-      startLiveTracking_();
-      crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
-      sessionDisplayTimer = setInterval(updateSessionUI_, 1000);
-      d("sessionToggle").classList.add("on");
-      d("sessionToggle").textContent = "LIVE";
-      d("sessionBar").classList.add("active");
-      d("sessionTimer").classList.add("active");
-      d("sessionPause").style.display = "block";
-      d("sessionPause").textContent = "⏸";
-      d("sessionPause").textContent = "⏸";
-      d("sessionStats").style.display = "flex";
-      updateSessionUI_();
-      sendCrumb_(); // immediate first breadcrumb
-      toast("🔴 Session started — recording route");
+      // Prompt for goals before starting
+      showGoalSelector_();
     }
+  }
+
+  function showGoalSelector_() {
+    // Create modal
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);";
+
+    const box = document.createElement("div");
+    box.style.cssText = "background:#1e1e24;width:85%;max-width:300px;padding:1.5rem;border-radius:16px;border:1px solid #444;text-align:center;";
+
+    box.innerHTML = `
+      <h3 style="margin:0 0 1.2rem;color:#fff;">🎯 Session Goals</h3>
+      
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <label style="color:#ccc;font-size:0.9rem;">Conversations</label>
+          <input type="number" id="goalConvoInput" value="${goalConvos}" style="width:60px;text-align:center;padding:6px;border-radius:6px;border:1px solid #444;background:#111;color:#fff;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <label style="color:#ccc;font-size:0.9rem;">Inspections</label>
+          <input type="number" id="goalInspInput" value="${goalInsps}" style="width:60px;text-align:center;padding:6px;border-radius:6px;border:1px solid #444;background:#111;color:#fff;">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <label style="color:#ccc;font-size:0.9rem;">Contracts</label>
+          <input type="number" id="goalContInput" value="${goalConts}" style="width:60px;text-align:center;padding:6px;border-radius:6px;border:1px solid #444;background:#111;color:#fff;">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button id="cancelGoalBtn" style="flex:1;padding:0.8rem;background:#333;color:#ccc;border:none;border-radius:10px;font-weight:600;">Cancel</button>
+        <button id="startGoalBtn" style="flex:1;padding:0.8rem;background:#1f6feb;color:#fff;border:none;border-radius:10px;font-weight:600;">Let's Go</button>
+      </div>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    d("cancelGoalBtn").onclick = () => overlay.remove();
+
+    d("startGoalBtn").onclick = () => {
+      goalConvos = parseInt(d("goalConvoInput").value) || 15;
+      goalInsps = parseInt(d("goalInspInput").value) || 3;
+      goalConts = parseInt(d("goalContInput").value) || 1;
+      overlay.remove();
+      startSession_();
+    };
+
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  }
+
+  function startSession_() {
+    sessionActive = true;
+    sessionPaused = false;
+    sessionId = randId_();
+    sessionLabel = "";
+    sessionStartMs = Date.now();
+    sessionElapsedMs = 0;
+    sessionKnockCount = 0;
+    sessionConvos = 0;
+    sessionInspections = 0;
+    sessionContracts = 0;
+
+    localStorage.removeItem("plat_last_crumb");
+    clearBreadcrumbTrail_();
+    startLiveTracking_();
+
+    crumbTimer = setInterval(sendCrumb_, CONFIG.BREADCRUMB_SEC * 1000);
+    sessionDisplayTimer = setInterval(updateSessionUI_, 1000);
+
+    d("sessionToggle").classList.add("on");
+    d("sessionToggle").textContent = "LIVE";
+    d("sessionBar").classList.add("active");
+    d("sessionTimer").classList.add("active");
+    d("sessionPause").style.display = "block";
+    d("sessionPause").textContent = "⏸";
+    d("sessionStats").style.display = "flex";
+
+    updateSessionUI_();
+    sendCrumb_(); // immediate first breadcrumb
+    toast("🔴 Session started — recording route");
   }
 
   function togglePause_() {
@@ -1151,16 +1211,16 @@
     // Knocks: just a counter
     d("sKnocks").textContent = `${sessionKnockCount} Knock`;
 
-    // Goals: 15 Convos, 3 Inspections, 1 Contract
-    d("sConvos").textContent = `${sessionConvos}/15 Convo`;
-    d("sInsps").textContent = `${sessionInspections}/3 Insp`;
-    d("sConts").textContent = `${sessionContracts}/1 Cont`;
+    // Goals: dynamic
+    d("sConvos").textContent = `${sessionConvos}/${goalConvos} Convo`;
+    d("sInsps").textContent = `${sessionInspections}/${goalInsps} Insp`;
+    d("sConts").textContent = `${sessionContracts}/${goalConts} Cont`;
 
     // Colorize if > 0 (or turn green if goal met?)
     d("sKnocks").style.color = sessionKnockCount > 0 ? "#fff" : "#888";
-    d("sConvos").style.color = sessionConvos >= 15 ? "#4da3ff" : (sessionConvos > 0 ? "#fff" : "#888");
-    d("sInsps").style.color = sessionInspections >= 3 ? "#00e5ff" : (sessionInspections > 0 ? "#4da3ff" : "#888");
-    d("sConts").style.color = sessionContracts >= 1 ? "#00ff9d" : (sessionContracts > 0 ? "#00e5ff" : "#888");
+    d("sConvos").style.color = sessionConvos >= goalConvos ? "#4da3ff" : (sessionConvos > 0 ? "#fff" : "#888");
+    d("sInsps").style.color = sessionInspections >= goalInsps ? "#00e5ff" : (sessionInspections > 0 ? "#4da3ff" : "#888");
+    d("sConts").style.color = sessionContracts >= goalConts ? "#00ff9d" : (sessionContracts > 0 ? "#00e5ff" : "#888");
   }
 
   function formatTimer_(ms) {
