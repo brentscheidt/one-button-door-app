@@ -41,7 +41,7 @@
   let sessionContracts = 0;
   let sessionDisplayTimer = null;
   let currentFilter = localStorage.getItem("plat_filter") || "all";
-  let routePolylines = [];
+  let activeRoutePolys = new Map(); // sessionId -> [polylines]
   let showingRoutes = false;
   let liveWatchId = null;
   let livePos = null;
@@ -931,6 +931,13 @@
         visible = pin.ts && new Date(pin.ts).getTime() >= todayStart;
       } else if (currentFilter === "week") {
         visible = pin.ts && new Date(pin.ts).getTime() >= weekStart;
+      } else if (currentFilter.startsWith("status:")) {
+        const needle = currentFilter.split(":")[1];
+        // Check status (top level) or substatus
+        const s = (pin.status || "").toLowerCase();
+        const sub = (pin.substatus || "").toLowerCase();
+        if (s.includes(needle) || sub.includes(needle)) visible = true;
+        else visible = false;
       }
       // "all" → always visible
 
@@ -1211,24 +1218,15 @@
   /* ---------- Route Display ---------- */
   async function showRouteSelector_() {
     closeDragonMenu_();
-    if (showingRoutes) {
-      // Toggle OFF if already showing
-      routePolylines.forEach(p => p.setMap(null));
-      routePolylines = [];
-      showingRoutes = false;
-      d("dmRoutes").textContent = "View Routes";
-      toast("Routes cleared");
-      return;
-    }
+
+    // Check if we have active routes to show "Clear" or just list
+    const hasActive = activeRoutePolys.size > 0;
 
     toast("Fetching recent sessions...");
     try {
-      // Fetch last 14 days of sessions summary if possible, or just all breadcrumbs grouped
-      // For efficiency using existing endpoint
       const params = new URLSearchParams({ mode: "getRouteSessions" });
       const res = await fetch(`${CONFIG.SCRIPT_BASE}?${params}`);
       const sessions = await res.json();
-      // Expected format: [{session_id, user, first_ts, last_ts, points, ...}, ...]
 
       if (!sessions || sessions.length === 0) {
         toast("No recent route history found");
@@ -1237,36 +1235,55 @@
 
       // Build modal
       const overlay = document.createElement("div");
-      overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);";
+      overlay.id = "routeOverlay";
+      overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);";
 
       const box = document.createElement("div");
-      box.style.cssText = "background:#1e1e24;width:90%;max-width:350px;max-height:80vh;display:flex;flex-direction:column;border-radius:16px;border:1px solid #444;overflow:hidden;";
+      box.style.cssText = "background:#1e1e24;width:90%;max-width:380px;max-height:80vh;display:flex;flex-direction:column;border-radius:16px;border:1px solid #444;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.8);";
 
       const header = document.createElement("div");
       header.style.cssText = "padding:1rem;background:#2a2a30;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center;";
-      header.innerHTML = `<h3 style="margin:0;color:#fff;font-size:1rem;">Select Route</h3><button id="closeRouteSel" style="background:none;border:none;color:#aaa;font-size:1.5rem;">&times;</button>`;
+      header.innerHTML = `
+          <h3 style="margin:0;color:#fff;font-size:1rem;">Select Routes (Multi)</h3>
+          <div style="display:flex;gap:10px;">
+            ${hasActive ? '<button id="clearRoutesBtn" style="padding:4px 8px;font-size:0.75rem;background:#772222;border:none;border-radius:4px;color:white;">Clear All</button>' : ''}
+            <button id="closeRouteSel" style="background:none;border:none;color:#aaa;font-size:1.5rem;line-height:1;">&times;</button>
+          </div>
+        `;
 
       const list = document.createElement("div");
       list.style.cssText = "flex:1;overflow-y:auto;padding:0.5rem;";
 
       sessions.forEach(s => {
+        const isActive = activeRoutePolys.has(s.session_id);
         const start = new Date(s.first_ts);
         const durMin = ((new Date(s.last_ts) - start) / 60000).toFixed(0);
-        const dateStr = start.toLocaleDateString();
+        const dateStr = start.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
         const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         const row = document.createElement("div");
-        row.style.cssText = "padding:0.8rem;border-bottom:1px solid #333;cursor:pointer;display:flex;align-items:center;justify-content:space-between;";
-        row.innerHTML = `
-                <div>
-                   <div style="color:#fff;font-weight:600;">${dateStr} <span style="font-weight:400;color:#888;">${timeStr}</span></div>
-                   <div style="color:#aaa;font-size:0.8rem;">${s.user} • ${durMin} min • ${s.points} pts</div>
-                </div>
-                <div style="color:#4da3ff;">📍</div>
+        row.style.cssText = `
+                padding:0.8rem;
+                border-bottom:1px solid #333;
+                cursor:pointer;
+                display:flex;
+                align-items:center;
+                justify-content:space-between;
+                background:${isActive ? 'rgba(31, 111, 235, 0.15)' : 'transparent'};
+                border-left:${isActive ? '3px solid #1f6feb' : '3px solid transparent'};
+                transition:background 0.2s;
             `;
+
+        row.innerHTML = `
+                <div style="pointer-events:none;">
+                   <div style="color:${isActive ? '#fff' : '#ccc'};font-weight:600;">${dateStr} <span style="font-weight:400;color:#888;">${timeStr}</span></div>
+                   <div style="color:#888;font-size:0.75rem;">${s.user} • ${durMin} min • ${s.points} pts</div>
+                </div>
+                <div style="color:${isActive ? '#1f6feb' : '#444'};font-size:1.2rem;">${isActive ? '◉' : '○'}</div>
+            `;
+
         row.onclick = () => {
-          loadSpecificRoute_(s.session_id);
-          overlay.remove();
+          toggleRoute_(s.session_id, row);
         };
         list.appendChild(row);
       });
@@ -1277,6 +1294,16 @@
       document.body.appendChild(overlay);
 
       d("closeRouteSel").onclick = () => overlay.remove();
+      if (d("clearRoutesBtn")) {
+        d("clearRoutesBtn").onclick = () => {
+          activeRoutePolys.forEach(polys => polys.forEach(p => p.setMap(null)));
+          activeRoutePolys.clear();
+          showingRoutes = false;
+          d("dmRoutes").textContent = "View Routes";
+          overlay.remove();
+          toast("All routes cleared");
+        };
+      }
       overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
     } catch (e) {
@@ -1285,8 +1312,40 @@
     }
   }
 
+  async function toggleRoute_(sessionId, rowEl) {
+    if (activeRoutePolys.has(sessionId)) {
+      // Verify removal
+      const polys = activeRoutePolys.get(sessionId);
+      if (polys) polys.forEach(p => p.setMap(null));
+      activeRoutePolys.delete(sessionId);
+
+      // UI update
+      rowEl.style.background = "transparent";
+      rowEl.style.borderLeft = "3px solid transparent";
+      rowEl.querySelector("div:last-child").textContent = "○";
+      rowEl.querySelector("div:last-child").style.color = "#444";
+      rowEl.querySelector("div:first-child > div:first-child").style.color = "#ccc";
+    } else {
+      // Add
+      rowEl.style.opacity = "0.6"; // loading state
+      await loadSpecificRoute_(sessionId);
+      rowEl.style.opacity = "1";
+
+      // UI update if success
+      if (activeRoutePolys.has(sessionId)) {
+        rowEl.style.background = "rgba(31, 111, 235, 0.15)";
+        rowEl.style.borderLeft = "3px solid #1f6feb";
+        rowEl.querySelector("div:last-child").textContent = "◉";
+        rowEl.querySelector("div:last-child").style.color = "#1f6feb";
+        rowEl.querySelector("div:first-child > div:first-child").style.color = "#fff";
+      }
+    }
+
+    showingRoutes = activeRoutePolys.size > 0;
+    d("dmRoutes").textContent = showingRoutes ? "Manage Routes" : "View Routes";
+  }
+
   async function loadSpecificRoute_(sessionId) {
-    toast("Loading route...");
     try {
       const params = new URLSearchParams({ mode: "getBreadcrumbs", session_id: sessionId });
       const res = await fetch(`${CONFIG.SCRIPT_BASE}?${params}`);
@@ -1297,35 +1356,34 @@
         return;
       }
 
-      // Clear existing
-      routePolylines.forEach(p => p.setMap(null));
-      routePolylines = [];
-
-      // Draw
       const path = crumbs.sort((a, b) => (a.ts || "").localeCompare(b.ts || "")).map(p => ({ lat: p.lat, lng: p.lng }));
+
+      // Generate a random stable color for this session or use standard
+      // const hue = Math.floor(Math.random() * 360);
+      // const color = `hsl(${hue}, 70%, 50%)`;
+      const color = "#00e5ff"; // High-vis cyan default
 
       const poly = new google.maps.Polyline({
         path,
         geodesic: true,
-        strokeColor: "#00e5ff", // Cyan high visibility
+        strokeColor: color,
         strokeOpacity: 0.8,
         strokeWeight: 5,
         map,
+        clickable: true
       });
-      routePolylines.push(poly);
 
-      // Fit bounds
+      // Store it
+      activeRoutePolys.set(sessionId, [poly]); // array in case we do multi-segment later
+
+      // Fit bounds to latest added
       const bounds = new google.maps.LatLngBounds();
       path.forEach(p => bounds.extend(p));
       map.fitBounds(bounds);
 
-      showingRoutes = true;
-      d("dmRoutes").textContent = "Clear Route";
-      toast("Route loaded");
-
     } catch (e) {
       console.warn(e);
-      toast("Failed to draw route");
+      toast("Failed to load route segment");
     }
   }
 
