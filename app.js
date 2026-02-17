@@ -652,6 +652,7 @@
       substatus,
       note,
       user,
+      session_id: sessionId,
       device: navigator.userAgent || "",
       source: "app",
     };
