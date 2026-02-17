@@ -103,12 +103,26 @@
     d("saveBtn").addEventListener("click", saveCurrentPin_);
 
     // Search
-    d("searchBtn").addEventListener("click", () => {
-      const q = d("searchInput").value.trim();
-      if (q) searchPins_(q);
+    d("searchInput").addEventListener("input", (e) => {
+      updateSearchResults_(e.target.value.trim());
     });
-    d("searchInput").addEventListener("keyup", (e) => {
-      if (e.key === "Enter") searchPins_(d("searchInput").value.trim());
+    d("searchInput").addEventListener("focus", (e) => {
+      if (e.target.value.trim()) d("searchResults").classList.add("show");
+    });
+
+    // Hide results on outside click
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#searchResults") && !e.target.closest("#searchInput")) {
+        d("searchResults").classList.remove("show");
+      }
+    });
+
+    // Zoom Controls
+    d("zoomInBtn").addEventListener("click", () => {
+      map.setZoom(map.getZoom() + 1);
+    });
+    d("zoomOutBtn").addEventListener("click", () => {
+      map.setZoom(map.getZoom() - 1);
     });
 
     d("dragonBtn").addEventListener("click", toggleDragonMenu_);
@@ -1389,39 +1403,60 @@
   }
 
   /* ---------- Search ---------- */
-  function searchPins_(query) {
-    if (!query) return;
+  function updateSearchResults_(query) {
+    const container = d("searchResults");
+    if (!query) {
+      container.classList.remove("show");
+      return;
+    }
     query = query.toLowerCase();
 
     // Filter pins
-    searchResults = [];
+    const matches = [];
     for (const [id, pin] of pinsIndex.entries()) {
       const addr = (pin.address || "").toLowerCase();
       const note = (pin.note || "").toLowerCase();
-      const user = (pin.user || "").toLowerCase();
       const status = (pin.status || "").toLowerCase();
+      const sub = (pin.substatus || "").toLowerCase();
 
-      if (addr.includes(query) || note.includes(query) || status.includes(query)) {
-        searchResults.push(pin);
+      if (addr.includes(query) || note.includes(query) || status.includes(query) || sub.includes(query)) {
+        matches.push(pin);
+        if (matches.length >= 10) break; // limit to 10
       }
     }
 
-    if (searchResults.length === 0) {
-      toast("No matches found");
-      return;
-    }
-
-    // Navigate to first result
-    const target = searchResults[0];
-    map.panTo({ lat: target.lat, lng: target.lng });
-    map.setZoom(18);
-    openPanel_(target.pin_id);
-
-    if (searchResults.length > 1) {
-      toast(`Found ${searchResults.length} matches (showing 1st)`);
+    if (matches.length === 0) {
+      container.innerHTML = '<div class="search-item" style="cursor:default;color:#777;">No matches found</div>';
     } else {
-      toast(`Found 1 match`);
+      container.innerHTML = matches.map(p => `
+        <div class="search-item" data-id="${p.pin_id}">
+          <strong>${p.address || "Pinned Location"}</strong>
+          ${p.status || "—"} • ${p.substatus || ""}
+        </div>
+      `).join("");
+
+      // Add click listeners
+      container.querySelectorAll(".search-item").forEach(el => {
+        el.addEventListener("click", () => {
+          const pid = el.getAttribute("data-id");
+          panToResult_(pid);
+        });
+      });
     }
+
+    container.classList.add("show");
+  }
+
+  function panToResult_(pin_id) {
+    const pin = pinsIndex.get(pin_id);
+    if (!pin) return;
+
+    d("searchResults").classList.remove("show");
+    d("searchInput").value = ""; // clear after selection
+
+    map.panTo({ lat: pin.lat, lng: pin.lng });
+    map.setZoom(19);
+    openPanel_(pin_id);
   }
 
 

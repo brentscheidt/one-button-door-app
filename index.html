@@ -34,15 +34,14 @@
     /* ---------- Topbar ---------- */
     #topbar {
       display: flex;
+      flex-direction: column;
       gap: .35rem;
-      align-items: center;
       padding: .4rem .5rem;
       background: linear-gradient(180deg, #161618 0%, #111113 100%);
       border-bottom: 1px solid rgba(255, 255, 255, .06);
       position: sticky;
       top: 0;
       z-index: 10;
-      flex-wrap: wrap;
     }
 
     #topbar .row-1 {
@@ -50,13 +49,118 @@
       gap: .35rem;
       align-items: center;
       width: 100%;
+      flex-wrap: wrap;
     }
 
     #topbar .row-2 {
       display: flex;
-      gap: .35rem;
-      align-items: center;
+      justify-content: center;
       width: 100%;
+      position: relative;
+      /* for results dropdown */
+    }
+
+    /* Compact Search */
+    #searchInput {
+      width: 100%;
+      max-width: 280px;
+      margin: 0 auto;
+      border-radius: 20px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+    #searchInput:focus {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(31, 111, 235, 0.5);
+    }
+
+    #searchBtn {
+      display: none;
+    }
+
+    /* Hide button, use enter/typing */
+
+    #searchResults {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 280px;
+      background: #1a1a1e;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0 0 12px 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    #searchResults.show {
+      display: block;
+    }
+
+    .search-item {
+      padding: 0.6rem 0.8rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      color: #ccc;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .search-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .search-item strong {
+      color: #fff;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* Zoom Controls */
+    #zoomControls {
+      position: absolute;
+      bottom: 100px;
+      /* Above FAB buttons */
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 18;
+      /* Below panel/modals */
+    }
+
+    .zoom-btn {
+      width: 36px;
+      height: 36px;
+      background: rgba(22, 22, 24, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #ddd;
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .zoom-btn:active {
+      background: #333;
+      transform: scale(0.95);
     }
 
     /* ---------- Google Auth area ---------- */
@@ -794,11 +898,18 @@
         <button id="refreshBtn" title="Refresh">↻</button>
         <button id="locateBtn" title="Center on me">◎</button>
       </div>
-      <div class="row-2" style="display:flex;">
-        <input type="text" id="searchInput" placeholder="Search pins..." style="flex:1;min-width:100px;">
-        <button id="searchBtn">🔍</button>
+      <div class="row-2">
+        <input type="text" id="searchInput" placeholder="Search address, name, status...">
+        <div id="searchResults"></div>
       </div>
     </div>
+
+    <!-- Zoom Controls -->
+    <div id="zoomControls">
+      <div class="zoom-btn" id="zoomInBtn">+</div>
+      <div class="zoom-btn" id="zoomOutBtn">−</div>
+    </div>
+
     <button id="dragonBtn" aria-label="Menu">
       <img src="logo.png" alt="Platinum DoorKnock" />
     </button>
