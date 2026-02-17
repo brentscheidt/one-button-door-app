@@ -858,6 +858,7 @@
       // rebuild index
       pinsIndex.clear();
       arr.forEach(p => {
+        if ((p.status || "").toLowerCase() === "deleted") return;
         pinsIndex.set(p.pin_id, p);
         addOrUpdateMarker_(p);
         freshIds.add(p.pin_id);

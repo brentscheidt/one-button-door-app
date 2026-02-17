@@ -126,6 +126,7 @@ function getPins_() {
     // Basic validity checks
     if (!p.address || !p.pin_id) return false;
     if (!p.lat || !p.lng) return false;
+    if ((p.status || "").toLowerCase() === "deleted") return false;
     // Filter out potential garbage/header rows
     const pid = p.pin_id.toLowerCase();
     if (pid === "pin_id" || pid === "address_norm" || pid === "lat" || pid === "lng") return false;
