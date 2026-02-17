@@ -132,7 +132,7 @@
         const lng = e.latLng.lng();
         dropPinAtLocation_(lat, lng);
         longPressTimer = null;
-      }, 600);
+      }, 2000); // 2 seconds delay as requested
     });
     map.addListener("mouseup", () => { clearTimeout(longPressTimer); longPressTimer = null; });
     map.addListener("dragstart", () => { clearTimeout(longPressTimer); longPressTimer = null; });
@@ -503,6 +503,28 @@
     d("p_badge").style.display = pin.is_dnd ? "inline-block" : "none";
     d("p_meta").textContent = pinMetaText_(pin);
 
+    // Add Delete Button dynamically
+    let delBtn = d("deletePinBtn");
+    if (!delBtn) {
+      delBtn = document.createElement("button");
+      delBtn.id = "deletePinBtn";
+      delBtn.className = "btn red";
+      // Make it look dangerous but accessible
+      delBtn.style.marginTop = "1rem";
+      delBtn.style.width = "100%";
+      delBtn.style.fontSize = "0.8rem";
+      delBtn.style.padding = "0.6rem";
+      delBtn.textContent = "🗑 DELETE PIN";
+      d("panel").appendChild(delBtn);
+    }
+    // Only show for user's own pins
+    delBtn.style.display = isOwnPin_(pin) ? "block" : "none";
+    delBtn.onclick = () => {
+      if (confirm("Delete this pin permanently?")) {
+        deletePin_(pin.pin_id);
+      }
+    };
+
     d("note").value = "";
     d("subBtns").innerHTML = "";
     d("panel").classList.add("open");
@@ -638,7 +660,37 @@
       console.warn(e);
       // One pending offline log
       localStorage.setItem("plat_pending_log", JSON.stringify(payload));
-      toast("Offline. Will retry…");
+    }
+  }
+
+  /* ---------- Delete Pin ---------- */
+  async function deletePin_(pin_id) {
+    const user = getUser_();
+    if (!user) { toast("Sign in first"); return; }
+
+    try {
+      // Optimistic UI update
+      const pin = pinsIndex.get(pin_id);
+      if (pin) {
+        markers.get(pin_id)?.setMap(null);
+        markers.delete(pin_id);
+        pinsIndex.delete(pin_id);
+        closePanel_();
+      }
+
+      await fetch(`${CONFIG.SCRIPT_BASE}?mode=deletePin`, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ pin_id, user })
+      });
+
+      toast("Pin deleted");
+      setTimeout(() => fetchPins_(true), 1500); // refresh to sync
+    } catch (e) {
+      console.warn(e);
+      toast("Delete failed");
+      // Revert if needed, but fetchPins will fix it
     }
   }
 

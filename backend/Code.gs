@@ -39,6 +39,7 @@ function doPost(e) {
     const body = e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : {};
     if (mode === "log") return json_(handleLog_(body));
     if (mode === "breadcrumb") return json_(handleBreadcrumb_(body));
+    if (mode === "deletepin") return json_(deletePin_(body));
     return json_({ ok: false, error: "Unknown POST mode" });
   } catch (err) {
     return error_(err);
@@ -346,3 +347,34 @@ function num_(v){const n=Number(v);return isNaN(n)?null:n;}
 function toNumOrNull_(v){if(v===null||v===undefined||v==="")return null;const n=Number(v);return isNaN(n)?null:n;}
 function toBool_(v){if(typeof v==="boolean")return v;const s=String(v).toLowerCase();return s==="true"||s==="1"||s==="yes";}
 function numOrFallback_(n,f){const v=toNumOrNull_(n);return v===null?f:v;}
+
+/* ============ Delete Pin (Soft Delete) ============ */
+function deletePin_(payload) {
+  const pinId = String(payload.pin_id || "").trim();
+  const user = String(payload.user || "");
+  if (!pinId) return { ok: false, error: "No pin_id" };
+  if (!user) return { ok: false, error: "No user" };
+  
+  const ss = SpreadsheetApp.getActive();
+  const sh = ss.getSheetByName(SHEET.PINS);
+  const values = getRows_(sh);
+  const H = colIndex_(values[0], ["pin_id", "latest_status", "latest_substatus", "latest_ts", "latest_user"]);
+  
+  const rowIdx = values.findIndex(r => r[H.pin_id] === pinId);
+  if (rowIdx < 1) return { ok: false, error: "Pin not found" };
+  
+  // Update status to 'Deleted'
+  const rowIndex = rowIdx + 1;
+  sh.getRange(rowIndex, H.latest_status + 1).setValue("Deleted");
+  sh.getRange(rowIndex, H.latest_substatus + 1).setValue("User Request");
+  sh.getRange(rowIndex, H.latest_user + 1).setValue(user);
+  sh.getRange(rowIndex, H.latest_ts + 1).setValue(new Date().toISOString());
+  
+  // Log the deletion
+  appendLogRow_(pinId, values[rowIdx][colIndex_(values[0], ["address_norm"]).address_norm], {
+    lat: null, lng: null, status: "Deleted", substatus: "User Request", 
+    note: "Deleted by user", user, ts: new Date().toISOString(), device: "web", source: "app"
+  });
+  
+  return { ok: true };
+}
