@@ -34,6 +34,9 @@
   let sessionStartMs = 0;
   let sessionElapsedMs = 0;
   let sessionKnockCount = 0;
+  let sessionConvos = 0;
+  let sessionInspections = 0;
+  let sessionContracts = 0;
   let sessionDisplayTimer = null;
   let currentFilter = localStorage.getItem("plat_filter") || "all";
   let routePolylines = [];
@@ -703,7 +706,9 @@
     // Increment knock count if session active
     if (sessionActive) {
       sessionKnockCount++;
+      sessionKnockCount++;
       updateSessionUI_();
+      addSessionGoalMetrics_(status, sub);
     }
     // Visual feedback
     const btn = d("saveBtn");
@@ -724,6 +729,24 @@
       btn.textContent = `💾 SAVE — ${selectedStatus}`;
     } else {
       btn.textContent = "💾 SAVE";
+    }
+  }
+
+  function addSessionGoalMetrics_(status, sub) {
+    const s = (status || "").toLowerCase();
+    const sb = (sub || "").toLowerCase();
+
+    // Conversation
+    if (s === "conversation") {
+      sessionConvos++;
+    }
+    // Inspection
+    if (s === "inspection") {
+      sessionInspections++;
+    }
+    // Contract (under Customer -> Contract Signed)
+    if (s === "customer" && sb.includes("contract")) {
+      sessionContracts++;
     }
   }
 
@@ -951,19 +974,38 @@
 
     box.innerHTML = `
       <h3 style="margin:0 0 1rem;font-size:1.1rem;color:#c8b48c;text-transform:uppercase;letter-spacing:0.05em;">Session Stats</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
-        <div style="background:rgba(255,255,255,0.05);padding:0.8rem;border-radius:10px;">
-          <div style="font-size:1.4rem;font-weight:700;color:#fff;">${knocks}</div>
-          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;">Knocks</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:1.5rem;">
+        
+        <!-- Knocks -->
+        <div style="background:rgba(255,255,255,0.05);padding:0.6rem;border-radius:10px;">
+          <div style="font-size:1.3rem;font-weight:700;color:#fff;">${knocks}</div>
+          <div style="font-size:0.7rem;color:#888;text-transform:uppercase;">Knocks</div>
         </div>
-        <div style="background:rgba(255,255,255,0.05);padding:0.8rem;border-radius:10px;">
-          <div style="font-size:1.4rem;font-weight:700;color:#fff;">${pinsDropped}</div>
-          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;">Pins</div>
+
+        <!-- Duration -->
+        <div style="background:rgba(255,255,255,0.05);padding:0.6rem;border-radius:10px;">
+          <div style="font-size:1.3rem;font-weight:700;color:${sessionActive ? '#ff6b6b' : '#888'};font-variant-numeric:tabular-nums;">${elapsed}</div>
+          <div style="font-size:0.7rem;color:#888;text-transform:uppercase;">Time</div>
         </div>
-        <div style="grid-column:span 2;background:rgba(255,255,255,0.05);padding:0.8rem;border-radius:10px;">
-          <div style="font-size:1.4rem;font-weight:700;color:${sessionActive ? '#ff6b6b' : '#888'};font-variant-numeric:tabular-nums;">${elapsed}</div>
-          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;">Duration</div>
+
+        <!-- Conversations (Goal: 15) -->
+        <div style="background:rgba(255,255,255,0.05);padding:0.6rem;border-radius:10px;">
+          <div style="font-size:1.3rem;font-weight:700;color:#4da3ff;">${sessionConvos}</div>
+          <div style="font-size:0.7rem;color:#888;text-transform:uppercase;">Convos</div>
         </div>
+
+        <!-- Inspections (Goal: 3) -->
+        <div style="background:rgba(255,255,255,0.05);padding:0.6rem;border-radius:10px;">
+          <div style="font-size:1.3rem;font-weight:700;color:#f0a020;">${sessionInspections}</div>
+          <div style="font-size:0.7rem;color:#888;text-transform:uppercase;">Inspects</div>
+        </div>
+
+        <!-- Contracts (Goal: 1) -->
+        <div style="grid-column:span 2;background:rgba(50,205,50,0.15);padding:0.6rem;border-radius:10px;border:1px solid rgba(50,205,50,0.3);">
+          <div style="font-size:1.3rem;font-weight:700;color:#4caf50;">${sessionContracts}</div>
+          <div style="font-size:0.7rem;color:#eee;text-transform:uppercase;">Contracts Signed</div>
+        </div>
+
       </div>
       <button id="closeStats" style="width:100%;padding:0.8rem;background:#333;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:0.9rem;">Close</button>
     `;
@@ -1000,7 +1042,7 @@
       d("sessionPause").style.display = "none";
       d("sessionKnocks").style.display = "none";
       const savedLabel = saveSessionSummary_(endedAtMs);
-      toast(`Session saved: ${savedLabel} — ${sessionKnockCount} knocks, ${formatTimer_(sessionElapsedMs)}`);
+      toast(`Session saved: ${savedLabel} — ${sessionKnockCount} knocks, ${sessionConvos} convos`);
     } else {
       // Start session
       sessionActive = true;
@@ -1010,6 +1052,9 @@
       sessionStartMs = Date.now();
       sessionElapsedMs = 0;
       sessionKnockCount = 0;
+      sessionConvos = 0;
+      sessionInspections = 0;
+      sessionContracts = 0;
       localStorage.removeItem("plat_last_crumb");
       clearBreadcrumbTrail_();
       startLiveTracking_();
@@ -1114,6 +1159,9 @@
       ended_at: new Date(endedAtMs).toISOString(),
       elapsed_ms: sessionElapsedMs,
       knocks: sessionKnockCount,
+      convos: sessionConvos,
+      inspections: sessionInspections,
+      contracts: sessionContracts,
       breadcrumb_points: breadcrumbPath.length,
     };
     archive = archive.filter((s) => s.session_id !== sessionId);
