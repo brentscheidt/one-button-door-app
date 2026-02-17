@@ -114,8 +114,11 @@
     let longPressTimer = null;
     let longPressStart = null;
     map.addListener("click", closePanel_);
+    d("map").addEventListener("contextmenu", (e) => e.preventDefault());
     map.addListener("mousedown", (e) => {
-      longPressStart = { x: e.domEvent.clientX, y: e.domEvent.clientY };
+      const dom = e.domEvent || {};
+      if (typeof dom.button === "number" && dom.button !== 0) return;
+      longPressStart = { x: dom.clientX || 0, y: dom.clientY || 0 };
       longPressTimer = setTimeout(() => {
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
@@ -124,12 +127,20 @@
       }, 600);
     });
     map.addListener("mouseup", () => { clearTimeout(longPressTimer); longPressTimer = null; });
+    map.addListener("dragstart", () => { clearTimeout(longPressTimer); longPressTimer = null; });
     map.addListener("mousemove", (e) => {
       if (longPressTimer && longPressStart) {
-        const dx = e.domEvent.clientX - longPressStart.x;
-        const dy = e.domEvent.clientY - longPressStart.y;
+        const dom = e.domEvent || {};
+        const dx = (dom.clientX || 0) - longPressStart.x;
+        const dy = (dom.clientY || 0) - longPressStart.y;
         if (Math.sqrt(dx * dx + dy * dy) > 10) { clearTimeout(longPressTimer); longPressTimer = null; }
       }
+    });
+    map.addListener("contextmenu", (e) => {
+      clearTimeout(longPressTimer); longPressTimer = null;
+      if (e.domEvent && typeof e.domEvent.preventDefault === "function") e.domEvent.preventDefault();
+      if (!e.latLng) return;
+      dropPinAtLocation_(e.latLng.lat(), e.latLng.lng());
     });
 
     // Fast log buttons → show suboptions
@@ -388,21 +399,52 @@
     const color = markerColorFor_(pin);
     const isOwn = isOwnPin_(pin);
     const icon = markerIcon_(color, isOwn);
+    const isTemp = !!pin.is_temp;
     if (markers.has(pin.pin_id)) {
       const m = markers.get(pin.pin_id);
       m.setPosition({ lat: pin.lat, lng: pin.lng });
       m.setIcon(icon);
       m.setTitle(pin.address);
+      m.setDraggable(isTemp);
     } else {
       const m = new google.maps.Marker({
         map,
         position: { lat: pin.lat, lng: pin.lng },
         icon,
         title: pin.address,
+        draggable: isTemp,
       });
       m.addListener("click", () => openPanel_(pin.pin_id));
+      m.addListener("dragend", async (e) => {
+        if (!e.latLng) return;
+        await handleMarkerDragEnd_(pin.pin_id, e.latLng.lat(), e.latLng.lng());
+      });
       markers.set(pin.pin_id, m);
     }
+  }
+
+  async function handleMarkerDragEnd_(pin_id, lat, lng) {
+    const pin = pinsIndex.get(pin_id);
+    if (!pin) return;
+
+    pin.lat = lat;
+    pin.lng = lng;
+    pin.ts = new Date().toISOString();
+    try {
+      pin.address = await reverseGeocode_({ lat, lng });
+    } catch (e) {
+      console.warn("Reverse geocode after drag failed", e);
+    }
+    pinsIndex.set(pin_id, pin);
+
+    const marker = markers.get(pin_id);
+    if (marker) marker.setTitle(pin.address || "Pinned location");
+    if (selectedPin && selectedPin.pin_id === pin_id) {
+      selectedPin = pin;
+      d("p_addr").textContent = pin.address || "";
+      d("p_meta").textContent = pinMetaText_(pin);
+    }
+    toast("Pin moved — save to keep");
   }
 
   function markerIcon_(hex, isOwn) {
@@ -431,6 +473,10 @@
     return "#888888";                              // unknown user — gray
   }
 
+  function pinMetaText_(pin) {
+    return `${pin.status || "—"} • ${pin.substatus || ""} • ${pin.user || ""} • ${fmtDate_(pin.ts) || ""}`;
+  }
+
   /* ---------- Panel & logging ---------- */
   function openPanel_(pin_id) {
     const pin = pinsIndex.get(pin_id);
@@ -439,7 +485,7 @@
 
     d("p_addr").textContent = pin.address;
     d("p_badge").style.display = pin.is_dnd ? "inline-block" : "none";
-    d("p_meta").textContent = `${pin.status || "—"} • ${pin.substatus || ""} • ${pin.user || ""} • ${fmtDate_(pin.ts) || ""}`;
+    d("p_meta").textContent = pinMetaText_(pin);
 
     d("note").value = "";
     d("subBtns").innerHTML = "";
@@ -624,10 +670,11 @@
       map.setCenter(latlng);
       map.panTo(latlng);
       const addr = await reverseGeocode_(latlng);
+      const pin_id = findExistingByAddress_(addr) || `temp_${randId_()}`;
 
-      // Create a temporary local pin (pin_id empty → backend will upsert & assign/keep)
+      // Create a local draft pin that can be dragged before save.
       const temp = {
-        pin_id: findExistingByAddress_(addr) || "", // reuse pin if exists
+        pin_id,
         address: addr,
         lat: latlng.lat,
         lng: latlng.lng,
@@ -636,13 +683,13 @@
         user,
         is_dnd: false,
         ts: new Date().toISOString(),
+        is_temp: true,
       };
-      // show on map immediately
-      pinsIndex.set(temp.pin_id || addr, temp);
+      pinsIndex.set(temp.pin_id, temp);
       selectedPin = temp;
-      addOrUpdateMarker_({ ...temp, pin_id: temp.pin_id || addr });
-      openPanel_(temp.pin_id || addr);
-      toast("Pin placed");
+      addOrUpdateMarker_(temp);
+      openPanel_(temp.pin_id);
+      toast("Pin placed — drag to adjust");
     } catch (e) {
       console.warn(e);
       toast("Could not drop pin");
@@ -667,9 +714,10 @@
       const latlng = { lat, lng };
       map.panTo(latlng);
       const addr = await reverseGeocode_(latlng);
+      const pin_id = findExistingByAddress_(addr) || `temp_${randId_()}`;
 
       const temp = {
-        pin_id: findExistingByAddress_(addr) || "",
+        pin_id,
         address: addr,
         lat,
         lng,
@@ -678,12 +726,13 @@
         user,
         is_dnd: false,
         ts: new Date().toISOString(),
+        is_temp: true,
       };
-      pinsIndex.set(temp.pin_id || addr, temp);
+      pinsIndex.set(temp.pin_id, temp);
       selectedPin = temp;
-      addOrUpdateMarker_({ ...temp, pin_id: temp.pin_id || addr });
-      openPanel_(temp.pin_id || addr);
-      toast("📌 Pin placed");
+      addOrUpdateMarker_(temp);
+      openPanel_(temp.pin_id);
+      toast("📌 Pin placed — drag to adjust");
     } catch (e) {
       console.warn(e);
       toast("Could not drop pin");
@@ -701,6 +750,8 @@
 
       // Track which pin_ids came from backend
       const freshIds = new Set();
+      const backendAddresses = new Set();
+      const localTempPins = Array.from(pinsIndex.values()).filter((p) => p && p.is_temp);
 
       // rebuild index
       pinsIndex.clear();
@@ -708,6 +759,24 @@
         pinsIndex.set(p.pin_id, p);
         addOrUpdateMarker_(p);
         freshIds.add(p.pin_id);
+        if (p.address) backendAddresses.add(String(p.address).toLowerCase());
+      });
+
+      // Keep unsaved local draft pins unless backend now has that address.
+      localTempPins.forEach((p) => {
+        const addr = String(p.address || "").toLowerCase();
+        if (addr && backendAddresses.has(addr)) {
+          const m = markers.get(p.pin_id);
+          if (m) {
+            m.setMap(null);
+            markers.delete(p.pin_id);
+          }
+          return;
+        }
+        if (!pinsIndex.has(p.pin_id)) {
+          pinsIndex.set(p.pin_id, p);
+          addOrUpdateMarker_(p);
+        }
       });
 
       // Remove stale markers (pins deleted or no longer returned)

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.2 — 02_17_26
+**Beta field-fix pass: pin placement + correction**
+- ✅ **Map long-press behavior tightened** — map now suppresses browser context menu/save-image behavior and routes long-press/right-click into pin placement.
+- ✅ **Dropped pin is now draggable before save** — after placing a pin, you can drag it to the exact property location and save the corrected coordinates/address.
+- ✅ **Draft pin resilience during polling** — unsaved local dropped pins stay visible across refresh polling until backend has a matching saved address.
+
 ## v0.8.1 — 02_16_26
 **Session naming + independent session archive**
 - ✅ **End-session naming prompt** — when ending a session, user can name it; if blank/canceled, it auto-saves with date/time label.
