@@ -60,7 +60,7 @@
   const d = (id) => document.getElementById(id);
   const toast = (msg) => {
     const el = d("toast");
-    el.textContent = msg;
+    el.innerHTML = msg;
     el.classList.add("show");
     setTimeout(() => el.classList.remove("show"), 2200);
   };
@@ -115,7 +115,7 @@
     d("dmRoutes").addEventListener("click", showRouteSelector_);
     d("dmStats").addEventListener("click", () => { closeDragonMenu_(); showSessionStats_(); });
     d("dmSettings").addEventListener("click", handleSettings_);
-    d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by tscstudios"); });
+    d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by tscstudios <img src='logo.png' style='width:16px;height:16px;vertical-align:middle;filter:invert(1);'>"); });
     d("viewSelect").addEventListener("change", () => {
       currentFilter = d("viewSelect").value;
       localStorage.setItem("plat_filter", currentFilter);
