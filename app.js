@@ -946,6 +946,12 @@
         visible = pin.ts && new Date(pin.ts).getTime() >= todayStart;
       } else if (currentFilter === "week") {
         visible = pin.ts && new Date(pin.ts).getTime() >= weekStart;
+      } else if (currentFilter === "active") {
+        // Hide dead / dnd
+        const s = (pin.status || "").toLowerCase();
+        const sub = (pin.substatus || "").toLowerCase();
+        if (s.includes("dead") || sub.includes("dead") || pin.is_dnd) visible = false;
+        else visible = true;
       } else if (currentFilter.startsWith("status:")) {
         const needle = currentFilter.split(":")[1];
         // Check status (top level) or substatus
@@ -1403,7 +1409,7 @@
   }
 
   /* ---------- Search ---------- */
-  function updateSearchResults_(query) {
+  async function updateSearchResults_(query) {
     const container = d("searchResults");
     if (!query) {
       container.classList.remove("show");
@@ -1411,8 +1417,16 @@
     }
     query = query.toLowerCase();
 
+    // Get user pos for sorting
+    let myLat = null, myLng = null;
+    try {
+      const pos = await getBestPosition_();
+      myLat = pos.lat;
+      myLng = pos.lng;
+    } catch (e) { }
+
     // Filter pins
-    const matches = [];
+    let matches = [];
     for (const [id, pin] of pinsIndex.entries()) {
       const addr = (pin.address || "").toLowerCase();
       const note = (pin.note || "").toLowerCase();
@@ -1420,20 +1434,37 @@
       const sub = (pin.substatus || "").toLowerCase();
 
       if (addr.includes(query) || note.includes(query) || status.includes(query) || sub.includes(query)) {
-        matches.push(pin);
-        if (matches.length >= 10) break; // limit to 10
+        // Calc dist
+        let dist = 9999999;
+        if (myLat !== null) {
+          dist = haversineM_(myLat, myLng, pin.lat, pin.lng);
+        }
+        matches.push({ pin, dist });
       }
     }
+
+    // Sort by distance
+    matches.sort((a, b) => a.dist - b.dist);
+    matches = matches.slice(0, 10); // top 10 nearest
 
     if (matches.length === 0) {
       container.innerHTML = '<div class="search-item" style="cursor:default;color:#777;">No matches found</div>';
     } else {
-      container.innerHTML = matches.map(p => `
+      container.innerHTML = matches.map(m => {
+        const p = m.pin;
+        let distStr = "";
+        if (m.dist < 1000) distStr = `${Math.round(m.dist)}m`;
+        else if (m.dist < 9000000) distStr = `${(m.dist / 1000).toFixed(1)}km`;
+
+        return `
         <div class="search-item" data-id="${p.pin_id}">
-          <strong>${p.address || "Pinned Location"}</strong>
+          <div style="display:flex;justify-content:space-between;">
+             <strong>${p.address || "Pinned Location"}</strong>
+             <span style="color:#1f6feb;font-size:0.75rem;">${distStr}</span>
+          </div>
           ${p.status || "—"} • ${p.substatus || ""}
         </div>
-      `).join("");
+      `}).join("");
 
       // Add click listeners
       container.querySelectorAll(".search-item").forEach(el => {
