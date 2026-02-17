@@ -115,7 +115,7 @@
     d("dmRoutes").addEventListener("click", showRouteSelector_);
     d("dmStats").addEventListener("click", () => { closeDragonMenu_(); showSessionStats_(); });
     d("dmSettings").addEventListener("click", handleSettings_);
-    d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by BSRG 🐉"); });
+    d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by tscstudios 🐉"); });
     d("viewSelect").addEventListener("change", () => {
       currentFilter = d("viewSelect").value;
       localStorage.setItem("plat_filter", currentFilter);
@@ -1428,12 +1428,39 @@
   /* ---------- Settings ---------- */
   function handleSettings_() {
     closeDragonMenu_();
-    if (confirm("Reset app cache and reload? (Keeps you signed in)")) {
-      const auth = localStorage.getItem("plat_auth");
-      localStorage.clear();
-      if (auth) localStorage.setItem("plat_auth", auth);
-      window.location.reload();
-    }
+
+    // Create a modal
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);";
+
+    const box = document.createElement("div");
+    box.style.cssText = "background:#1e1e24;width:85%;max-width:320px;padding:1.5rem;border-radius:16px;border:1px solid #444;text-align:center;";
+
+    box.innerHTML = `
+      <h3 style="margin:0 0 1rem;color:#fff;font-size:1.1rem;">Settings</h3>
+      <div style="margin-bottom:1.5rem;color:#ccc;font-size:0.9rem;">
+        App Version: v0.8.0<br>
+        Created by: tscstudios 🐉
+      </div>
+      <button id="resetCacheBtn" style="width:100%;padding:0.8rem;background:#772222;color:#fff;border:none;border-radius:10px;font-weight:600;margin-bottom:0.8rem;">Reset App Cache</button>
+      <button id="closeSettingsBtn" style="width:100%;padding:0.8rem;background:#333;color:#fff;border:none;border-radius:10px;font-weight:600;">Close</button>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    d("resetCacheBtn").onclick = () => {
+      // Small confirmation before nuclear option
+      if (confirm("Reload app and clear cache?")) {
+        const auth = localStorage.getItem("plat_auth");
+        localStorage.clear();
+        if (auth) localStorage.setItem("plat_auth", auth);
+        window.location.reload();
+      }
+    };
+
+    d("closeSettingsBtn").onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   }
 
   /* ---------- Utils ---------- */
