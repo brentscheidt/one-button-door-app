@@ -1148,16 +1148,19 @@
     d("sessionTimer").textContent = formatTimer_(sessionElapsedMs);
 
     // Update verbose stats
+    // Knocks: just a counter
     d("sKnocks").textContent = `${sessionKnockCount} Knock`;
-    d("sConvos").textContent = `${sessionConvos} Convo`;
-    d("sInsps").textContent = `${sessionInspections} Insp`;
-    d("sConts").textContent = `${sessionContracts} Cont`;
 
-    // Colorize if > 0
+    // Goals: 15 Convos, 3 Inspections, 1 Contract
+    d("sConvos").textContent = `${sessionConvos}/15 Convo`;
+    d("sInsps").textContent = `${sessionInspections}/3 Insp`;
+    d("sConts").textContent = `${sessionContracts}/1 Cont`;
+
+    // Colorize if > 0 (or turn green if goal met?)
     d("sKnocks").style.color = sessionKnockCount > 0 ? "#fff" : "#888";
-    d("sConvos").style.color = sessionConvos > 0 ? "#fff" : "#888";
-    d("sInsps").style.color = sessionInspections > 0 ? "#4da3ff" : "#888";
-    d("sConts").style.color = sessionContracts > 0 ? "#00e5ff" : "#888";
+    d("sConvos").style.color = sessionConvos >= 15 ? "#4da3ff" : (sessionConvos > 0 ? "#fff" : "#888");
+    d("sInsps").style.color = sessionInspections >= 3 ? "#00e5ff" : (sessionInspections > 0 ? "#4da3ff" : "#888");
+    d("sConts").style.color = sessionContracts >= 1 ? "#00ff9d" : (sessionContracts > 0 ? "#00e5ff" : "#888");
   }
 
   function formatTimer_(ms) {
