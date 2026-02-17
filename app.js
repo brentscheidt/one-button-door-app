@@ -22,6 +22,8 @@
   let map, geocoder, meMarker;
   let markers = new Map();
   let pinsIndex = new Map();
+  let searchResults = []; // for search navigation
+  let searchIndex = 0;
   let selectedPin = null;
   let selectedStatus = "";
   let selectedSub = "";
@@ -96,10 +98,21 @@
     d("dropBtn").addEventListener("click", dropPinAtGps_);
     d("sessionToggle").addEventListener("click", toggleSession_);
     d("sessionPause").addEventListener("click", togglePause_);
+    d("sessionPause").addEventListener("click", togglePause_);
     d("closePanel").addEventListener("click", closePanel_);
     d("saveBtn").addEventListener("click", saveCurrentPin_);
+
+    // Search
+    d("searchBtn").addEventListener("click", () => {
+      const q = d("searchInput").value.trim();
+      if (q) searchPins_(q);
+    });
+    d("searchInput").addEventListener("keyup", (e) => {
+      if (e.key === "Enter") searchPins_(d("searchInput").value.trim());
+    });
+
     d("dragonBtn").addEventListener("click", toggleDragonMenu_);
-    d("dmRoutes").addEventListener("click", toggleRoutes_);
+    d("dmRoutes").addEventListener("click", showRouteSelector_);
     d("dmStats").addEventListener("click", () => { closeDragonMenu_(); showSessionStats_(); });
     d("dmSettings").addEventListener("click", handleSettings_);
     d("dmAbout").addEventListener("click", () => { closeDragonMenu_(); toast("Platinum DoorKnock v0.8.0 — by BSRG 🐉"); });
@@ -1197,88 +1210,159 @@
   }
 
   /* ---------- Route Display ---------- */
-  function toggleRoutes_() {
+  async function showRouteSelector_() {
     closeDragonMenu_();
     if (showingRoutes) {
+      // Toggle OFF if already showing
       routePolylines.forEach(p => p.setMap(null));
       routePolylines = [];
       showingRoutes = false;
       d("dmRoutes").textContent = "View Routes";
-      toast("Routes hidden");
-    } else {
-      showingRoutes = true;
-      d("dmRoutes").textContent = "Hide Routes";
-      fetchAndDrawRoutes_();
+      toast("Routes cleared");
+      return;
+    }
+
+    toast("Fetching recent sessions...");
+    try {
+      // Fetch last 14 days of sessions summary if possible, or just all breadcrumbs grouped
+      // For efficiency using existing endpoint
+      const params = new URLSearchParams({ mode: "getRouteSessions" });
+      const res = await fetch(`${CONFIG.SCRIPT_BASE}?${params}`);
+      const sessions = await res.json();
+      // Expected format: [{session_id, user, first_ts, last_ts, points, ...}, ...]
+
+      if (!sessions || sessions.length === 0) {
+        toast("No recent route history found");
+        return;
+      }
+
+      // Build modal
+      const overlay = document.createElement("div");
+      overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);";
+
+      const box = document.createElement("div");
+      box.style.cssText = "background:#1e1e24;width:90%;max-width:350px;max-height:80vh;display:flex;flex-direction:column;border-radius:16px;border:1px solid #444;overflow:hidden;";
+
+      const header = document.createElement("div");
+      header.style.cssText = "padding:1rem;background:#2a2a30;border-bottom:1px solid #444;display:flex;justify-content:space-between;align-items:center;";
+      header.innerHTML = `<h3 style="margin:0;color:#fff;font-size:1rem;">Select Route</h3><button id="closeRouteSel" style="background:none;border:none;color:#aaa;font-size:1.5rem;">&times;</button>`;
+
+      const list = document.createElement("div");
+      list.style.cssText = "flex:1;overflow-y:auto;padding:0.5rem;";
+
+      sessions.forEach(s => {
+        const start = new Date(s.first_ts);
+        const durMin = ((new Date(s.last_ts) - start) / 60000).toFixed(0);
+        const dateStr = start.toLocaleDateString();
+        const timeStr = start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const row = document.createElement("div");
+        row.style.cssText = "padding:0.8rem;border-bottom:1px solid #333;cursor:pointer;display:flex;align-items:center;justify-content:space-between;";
+        row.innerHTML = `
+                <div>
+                   <div style="color:#fff;font-weight:600;">${dateStr} <span style="font-weight:400;color:#888;">${timeStr}</span></div>
+                   <div style="color:#aaa;font-size:0.8rem;">${s.user} • ${durMin} min • ${s.points} pts</div>
+                </div>
+                <div style="color:#4da3ff;">📍</div>
+            `;
+        row.onclick = () => {
+          loadSpecificRoute_(s.session_id);
+          overlay.remove();
+        };
+        list.appendChild(row);
+      });
+
+      box.appendChild(header);
+      box.appendChild(list);
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      d("closeRouteSel").onclick = () => overlay.remove();
+      overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    } catch (e) {
+      console.warn(e);
+      toast("Failed to load session list");
     }
   }
 
-  async function fetchAndDrawRoutes_() {
-    toast("Fetching today's routes...");
+  async function loadSpecificRoute_(sessionId) {
+    toast("Loading route...");
     try {
-      const params = new URLSearchParams({ mode: "getBreadcrumbs" });
+      const params = new URLSearchParams({ mode: "getBreadcrumbs", session_id: sessionId });
       const res = await fetch(`${CONFIG.SCRIPT_BASE}?${params}`);
-      const data = await res.json();
+      const crumbs = await res.json();
 
-      // Filter: Today only (local time)
-      const now = new Date();
-      // Reset to start of day 00:00:00
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-
-      // Fallback: if no routes today, try finding ANY recent routes (last 7 days) for testing
-      let relevant = data.filter(r => r.ts && new Date(r.ts).getTime() >= startOfDay);
-
-      if (relevant.length === 0) {
-        // Fallback for demo/testing purposes if today is empty
-        const weekAgo = startOfDay - (7 * 86400000);
-        relevant = data.filter(r => r.ts && new Date(r.ts).getTime() >= weekAgo);
-
-        if (relevant.length > 0) {
-          toast("No routes today — showing recent history");
-        } else {
-          toast("No recent routes found");
-          showingRoutes = false;
-          d("dmRoutes").textContent = "View Routes";
-          return;
-        }
+      if (!crumbs || crumbs.length === 0) {
+        toast("No data for this session");
+        return;
       }
 
-      // Group by session
-      const sessions = {};
-      relevant.forEach(r => {
-        const sid = r.session_id || "unknown"; // robust ID key
-        if (!sessions[sid]) sessions[sid] = [];
-        sessions[sid].push(r);
-      });
+      // Clear existing
+      routePolylines.forEach(p => p.setMap(null));
+      routePolylines = [];
 
       // Draw
-      Object.entries(sessions).forEach(([sid, points]) => {
-        points.sort((a, b) => (a.ts || "").localeCompare(b.ts || ""));
-        const path = points.map(p => ({ lat: p.lat, lng: p.lng }));
+      const path = crumbs.sort((a, b) => (a.ts || "").localeCompare(b.ts || "")).map(p => ({ lat: p.lat, lng: p.lng }));
 
-        // Color based on user
-        const u = (points[0].user || "").toLowerCase();
-        let color = "#999999";
-        if (u.includes("brent")) color = "#8a2be2"; // BlueViolet
-        else if (u.includes("paris")) color = "#ff00ff"; // Magenta
-        else color = "#ff8c00"; // DarkOrange (unknown)
-
-        const poly = new google.maps.Polyline({
-          path,
-          geodesic: true,
-          strokeColor: color,
-          strokeOpacity: 0.7,
-          strokeWeight: 4,
-          map,
-        });
-        routePolylines.push(poly);
+      const poly = new google.maps.Polyline({
+        path,
+        geodesic: true,
+        strokeColor: "#00e5ff", // Cyan high visibility
+        strokeOpacity: 0.8,
+        strokeWeight: 5,
+        map,
       });
-      toast(`Showing ${Object.keys(sessions).length} session(s)`);
+      routePolylines.push(poly);
+
+      // Fit bounds
+      const bounds = new google.maps.LatLngBounds();
+      path.forEach(p => bounds.extend(p));
+      map.fitBounds(bounds);
+
+      showingRoutes = true;
+      d("dmRoutes").textContent = "Clear Route";
+      toast("Route loaded");
+
     } catch (e) {
       console.warn(e);
-      toast("Failed to load routes");
-      // Clean up toggle state since it failed
-      showingRoutes = false;
-      d("dmRoutes").textContent = "View Routes";
+      toast("Failed to draw route");
+    }
+  }
+
+  /* ---------- Search ---------- */
+  function searchPins_(query) {
+    if (!query) return;
+    query = query.toLowerCase();
+
+    // Filter pins
+    searchResults = [];
+    for (const [id, pin] of pinsIndex.entries()) {
+      const addr = (pin.address || "").toLowerCase();
+      const note = (pin.note || "").toLowerCase();
+      const user = (pin.user || "").toLowerCase();
+      const status = (pin.status || "").toLowerCase();
+
+      if (addr.includes(query) || note.includes(query) || status.includes(query)) {
+        searchResults.push(pin);
+      }
+    }
+
+    if (searchResults.length === 0) {
+      toast("No matches found");
+      return;
+    }
+
+    // Navigate to first result
+    const target = searchResults[0];
+    map.panTo({ lat: target.lat, lng: target.lng });
+    map.setZoom(18);
+    openPanel_(target.pin_id);
+
+    if (searchResults.length > 1) {
+      toast(`Found ${searchResults.length} matches (showing 1st)`);
+    } else {
+      toast(`Found 1 match`);
     }
   }
 
