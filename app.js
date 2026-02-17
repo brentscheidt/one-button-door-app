@@ -81,6 +81,14 @@
     breadcrumbInfoWindow = new google.maps.InfoWindow();
 
     d("locateBtn").addEventListener("click", locateMe_);
+    d("locateBtn").addEventListener("long-press", forceLocate_); // hypothetical event, implementing via standard click for now or long press logic
+    // Actually, let's just make a long press on locate button trigger force refresh
+    let locTimer;
+    d("locateBtn").addEventListener("mousedown", () => locTimer = setTimeout(forceLocate_, 1000));
+    d("locateBtn").addEventListener("touchstart", () => locTimer = setTimeout(forceLocate_, 1000));
+    d("locateBtn").addEventListener("mouseup", () => clearTimeout(locTimer));
+    d("locateBtn").addEventListener("touchend", () => clearTimeout(locTimer));
+
     d("refreshBtn").addEventListener("click", fetchPins_);
     d("dropBtn").addEventListener("click", dropPinAtGps_);
     d("sessionToggle").addEventListener("click", toggleSession_);
@@ -265,8 +273,16 @@
       map.panTo(latlng);
     } catch (e) {
       console.warn(e);
-      toast("Location unavailable");
+      toast("Location unavailable — check permissions");
+      // Fallback: don't move map, just warn.
     }
+  }
+
+  // Force button for GPS stuck issues
+  function forceLocate_() {
+    stopLiveTracking_();
+    toast("Resetting GPS...");
+    setTimeout(locateMe_, 500);
   }
 
   function startLiveTracking_() {
@@ -865,8 +881,46 @@
   function showSessionStats_() {
     const elapsed = sessionActive ? formatTimer_(Date.now() - sessionStartMs) : "0:00";
     const knocks = sessionKnockCount;
-    const status = sessionActive ? (sessionPaused ? "Paused" : "Active") : "Inactive";
-    toast(`Session: ${status} | Time: ${elapsed} | Knocks: ${knocks}`);
+    // Calculate estimated pins dropped in this session (naive count)
+    const pinsDropped = Array.from(pinsIndex.values()).filter(p => {
+      // Very rough: pins created roughly since session start
+      // Reality: backend doesn't link pin->session explicitly yet, but we can guess by timestamp
+      if (!sessionActive || !p.ts) return false;
+      const t = new Date(p.ts).getTime();
+      return t >= sessionStartMs;
+    }).length;
+
+    // Create a simple modal overlay
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);";
+
+    const box = document.createElement("div");
+    box.style.cssText = "background:#1a1a1e;width:85%;max-width:320px;padding:1.5rem;border-radius:16px;border:1px solid rgba(255,255,255,0.1);text-align:center;color:#e8e8e8;";
+
+    box.innerHTML = `
+      <h3 style="margin:0 0 1rem;font-size:1.1rem;color:#c8b48c;text-transform:uppercase;letter-spacing:0.05em;">Session Stats</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+        <div style="background:rgba(255,255,255,0.05);padding:0.8rem;border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:700;color:#fff;">${knocks}</div>
+          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;">Knocks</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);padding:0.8rem;border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:700;color:#fff;">${pinsDropped}</div>
+          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;">Pins</div>
+        </div>
+        <div style="grid-column:span 2;background:rgba(255,255,255,0.05);padding:0.8rem;border-radius:10px;">
+          <div style="font-size:1.4rem;font-weight:700;color:${sessionActive ? '#ff6b6b' : '#888'};font-variant-numeric:tabular-nums;">${elapsed}</div>
+          <div style="font-size:0.75rem;color:#888;text-transform:uppercase;">Duration</div>
+        </div>
+      </div>
+      <button id="closeStats" style="width:100%;padding:0.8rem;background:#333;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:0.9rem;">Close</button>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    document.getElementById("closeStats").onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   }
 
   // Close dragon menu on outside click
@@ -1067,21 +1121,33 @@
 
       // Filter: Today only (local time)
       const now = new Date();
+      // Reset to start of day 00:00:00
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      const relevant = data.filter(r => r.ts && new Date(r.ts).getTime() >= startOfDay);
+
+      // Fallback: if no routes today, try finding ANY recent routes (last 7 days) for testing
+      let relevant = data.filter(r => r.ts && new Date(r.ts).getTime() >= startOfDay);
 
       if (relevant.length === 0) {
-        toast("No routes found for today");
-        // Keep showingRoutes=true so user knows they are 'on' but empty? 
-        // Or toggle off? Let's leave it on to avoid confusion.
-        return;
+        // Fallback for demo/testing purposes if today is empty
+        const weekAgo = startOfDay - (7 * 86400000);
+        relevant = data.filter(r => r.ts && new Date(r.ts).getTime() >= weekAgo);
+
+        if (relevant.length > 0) {
+          toast("No routes today — showing recent history");
+        } else {
+          toast("No recent routes found");
+          showingRoutes = false;
+          d("dmRoutes").textContent = "View Routes";
+          return;
+        }
       }
 
       // Group by session
       const sessions = {};
       relevant.forEach(r => {
-        if (!sessions[r.session_id]) sessions[r.session_id] = [];
-        sessions[r.session_id].push(r);
+        const sid = r.session_id || "unknown"; // robust ID key
+        if (!sessions[sid]) sessions[sid] = [];
+        sessions[sid].push(r);
       });
 
       // Draw
