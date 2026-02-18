@@ -589,12 +589,20 @@
       if (!logs || logs.length === 0) {
         list.innerHTML = '<div class="history-empty">No history yet</div>';
       } else {
-        // Simple client-side dedupe (hide consecutive identical logs)
+        // Robust client-side dedupe (hide consecutive identical logs)
         const unique = [];
         logs.forEach((log, i) => {
           if (i > 0) {
-            const prev = logs[i - 1];
-            if (prev.note === log.note && prev.status === log.status && prev.substatus === log.substatus) return;
+            const prev = unique[unique.length - 1]; // Compare to last *kept* log, not just previous
+            const pNote = (prev.note || "").trim();
+            const cNote = (log.note || "").trim();
+            const pStat = (prev.status || "").toLowerCase();
+            const cStat = (log.status || "").toLowerCase();
+            const pSub = (prev.substatus || "").toLowerCase();
+            const cSub = (log.substatus || "").toLowerCase();
+
+            // If main attributes match, skip (it's a duplicate)
+            if (pNote === cNote && pStat === cStat && pSub === cSub) return;
           }
           unique.push(log);
         });
