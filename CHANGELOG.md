@@ -6,6 +6,13 @@
 - ✅ **Dropped pin is now draggable before save** — after placing a pin, you can drag it to the exact property location and save the corrected coordinates/address.
 - ✅ **Draft pin resilience during polling** — unsaved local dropped pins stay visible across refresh polling until backend has a matching saved address.
 
+## v0.8.2-data — 02_18_26
+**Paris Maps Migration & Data Cleanup**
+- ✅ **Data Import** — Imported 101 pins from "Paris" Google Maps lists ("Tuesday", "Thursday Jan", etc.).
+- ✅ **Geocoding Fixes** — Manually resolved computer-illegible addresses (e.g., "Paradise Valley Village") to exact coordinates.
+- ✅ **Dropped Pin Resolution** — Re-scraped 27 "Dropped Pin" entries to their actual nearby street addresses.
+- ✅ **Source Tracking** — Appended original list name (e.g., `(List: Tuesday)`) to all imported notes for traceability.
+
 ## v0.8.1 — 02_16_26
 **Session naming + independent session archive**
 - ✅ **End-session naming prompt** — when ending a session, user can name it; if blank/canceled, it auto-saves with date/time label.
