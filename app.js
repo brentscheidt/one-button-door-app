@@ -131,6 +131,7 @@
     });
 
     d("dragonBtn").addEventListener("click", toggleDragonMenu_);
+    d("dmHelp").addEventListener("click", showHelp_);
     d("dmRoutes").addEventListener("click", showRouteSelector_);
     d("dmStats").addEventListener("click", () => { closeDragonMenu_(); showSessionStats_(); });
     d("dmSettings").addEventListener("click", handleSettings_);
@@ -588,7 +589,17 @@
       if (!logs || logs.length === 0) {
         list.innerHTML = '<div class="history-empty">No history yet</div>';
       } else {
-        logs.forEach(log => {
+        // Simple client-side dedupe (hide consecutive identical logs)
+        const unique = [];
+        logs.forEach((log, i) => {
+          if (i > 0) {
+            const prev = logs[i - 1];
+            if (prev.note === log.note && prev.status === log.status && prev.substatus === log.substatus) return;
+          }
+          unique.push(log);
+        });
+
+        unique.forEach(log => {
           const el = document.createElement("div");
           el.className = "history-item";
           el.innerHTML = `<span class="hi-status">${log.status || "—"}</span> • ${log.substatus || ""} <span class="hi-time">— ${log.user || ""}, ${fmtDate_(log.ts)}</span>${log.note ? '<br><small>' + esc_(log.note) + '</small>' : ''}`;
@@ -599,6 +610,33 @@
     } catch (e) {
       console.warn("History fetch failed", e);
     }
+  }
+
+  function showHelp_() {
+    closeDragonMenu_();
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);";
+
+    const box = document.createElement("div");
+    box.style.cssText = "background:#1e1e24;width:85%;max-width:340px;padding:1.5rem;border-radius:16px;border:1px solid #444;color:#e8e8e8;";
+
+    box.innerHTML = `
+      <h3 style="margin:0 0 1rem;color:#fff;text-align:center;">Quick Guide</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:0.9rem;">
+        <div>📍 <strong>Drop Pin:</strong> Tap the big <span style="color:#c8b48c">Pin Button</span> or long-press anywhere on the map.</div>
+        <div>💾 <strong>Log Status:</strong> Select a status (e.g. Damage), then sub-status, then tap <strong>SAVE</strong>.</div>
+        <div>📝 <strong>History:</strong> Tap any pin to see who knocked it & when.</div>
+        <div>🔴 <strong>Session:</strong> Tap 'Session' to track your route path and stats (knocks/hour).</div>
+        <div>🔍 <strong>Search:</strong> Type address or status in top bar to find pins.</div>
+      </div>
+      <button id="closeHelpBtn" style="width:100%;margin-top:1.5rem;padding:0.8rem;background:#1f6feb;color:#fff;border:none;border-radius:10px;font-weight:600;">Got it</button>
+    `;
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    d("closeHelpBtn").onclick = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   }
 
   function closePanel_() {
